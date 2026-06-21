@@ -1009,7 +1009,7 @@ $stats = get_admin_stats();
                         <div class="about-logo">
                             <span class="logo-icon" style="width:80px; height:80px; display:block;"></span>
                         </div>
-                        <div class="version-number">v0.2.2.beta</div>
+                        <div class="version-number"><?php echo CURRENT_VERSION; ?></div>
                         <div style="color:var(--text-secondary); margin-bottom:24px;">NexusLink 内网穿透平台</div>
                     </div>
                     
@@ -1020,7 +1020,7 @@ $stats = get_admin_stats();
                         </div>
                         <div class="info-item">
                             <div class="info-label">版本号</div>
-                            <div class="info-value">v0.2.2.beta</div>
+                            <div class="info-value"><?php echo CURRENT_VERSION; ?></div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">发布日期</div>
