@@ -297,6 +297,79 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
     
+    // 编辑隧道
+    if ($post_action == 'edit_tunnel' && $current_user) {
+        $tunnel_id = intval($_POST['tunnel_id'] ?? 0);
+        $name = trim($_POST['name'] ?? '');
+        $local_addr = trim($_POST['local_addr'] ?? '127.0.0.1');
+        $local_port = intval($_POST['local_port'] ?? 0);
+        $remote_port = intval($_POST['remote_port'] ?? 0);
+        
+        $error = '';
+        if (!$tunnel_id) {
+            $error = '参数错误';
+        } elseif (!$name) {
+            $error = '请输入隧道名称';
+        } elseif (!$local_port) {
+            $error = '请输入本地端口';
+        } elseif (!$remote_port) {
+            $error = '请输入远程端口';
+        } else {
+            $db = db();
+            
+            // 检查隧道是否存在且属于当前用户
+            $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "tunnels WHERE id = ? AND user_id = ?");
+            $stmt->execute([$tunnel_id, $current_user['id']]);
+            $tunnel = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$tunnel) {
+                $error = '隧道不存在';
+            } else {
+                // 如果远程端口变了，检查是否被占用
+                if ($remote_port != $tunnel['remote_port']) {
+                    $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "tunnels WHERE node_id = ? AND remote_port = ? AND id != ?");
+                    $stmt->execute([$tunnel['node_id'], $remote_port, $tunnel_id]);
+                    if ($stmt->fetch()) {
+                        $error = '该远程端口已被占用，请换一个';
+                    }
+                }
+                
+                if (!$error) {
+                    // 更新隧道
+                    $stmt = $db->prepare("UPDATE " . DB_PREFIX . "tunnels SET name = ?, local_addr = ?, local_port = ?, remote_port = ?, updated_at = NOW() WHERE id = ? AND user_id = ?");
+                    $stmt->execute([$name, $local_addr, $local_port, $remote_port, $tunnel_id, $current_user['id']]);
+                    
+                    $success = '隧道修改成功！';
+                    header('Location: index.php?action=tunnels');
+                    exit;
+                }
+            }
+        }
+    }
+    
+    // 切换隧道状态
+    if ($post_action == 'toggle_tunnel' && $current_user) {
+        $tunnel_id = intval($_POST['tunnel_id'] ?? 0);
+        
+        if ($tunnel_id) {
+            $db = db();
+            
+            // 检查隧道是否存在且属于当前用户
+            $stmt = $db->prepare("SELECT status FROM " . DB_PREFIX . "tunnels WHERE id = ? AND user_id = ?");
+            $stmt->execute([$tunnel_id, $current_user['id']]);
+            $tunnel = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($tunnel) {
+                $new_status = $tunnel['status'] == 1 ? 0 : 1;
+                $stmt = $db->prepare("UPDATE " . DB_PREFIX . "tunnels SET status = ?, updated_at = NOW() WHERE id = ? AND user_id = ?");
+                $stmt->execute([$new_status, $tunnel_id, $current_user['id']]);
+            }
+        }
+        
+        header('Location: index.php?action=tunnels');
+        exit;
+    }
+    
     // 修改密码
     if ($post_action == 'change_password' && $current_user) {
         $old_password = $_POST['old_password'] ?? '';
@@ -865,7 +938,7 @@ function get_checkin_info($user_id) {
             <?php elseif ($action == 'create_tunnel'): ?>
                 <!-- 创建隧道 -->
                 <div class="card" style="max-width:600px;">
-                    <div class="card-title">🔌 创建隧道</div>
+                    <div class="card-title">创建隧道</div>
                     
                     <?php if (isset($error)): ?>
                         <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -933,10 +1006,101 @@ function get_checkin_info($user_id) {
                     </div>
                 </div>
                 
+            <?php elseif ($action == 'edit_tunnel'): ?>
+                <!-- 编辑隧道 -->
+                <div class="card" style="max-width:600px;">
+                    <div class="card-title">编辑隧道</div>
+                    
+                    <?php
+                    $tunnel_id = intval($_GET['id'] ?? 0);
+                    $edit_tunnel = null;
+                    
+                    if ($tunnel_id) {
+                        $stmt = db()->prepare("SELECT * FROM " . DB_PREFIX . "tunnels WHERE id = ? AND user_id = ?");
+                        $stmt->execute([$tunnel_id, $current_user['id']]);
+                        $edit_tunnel = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                    
+                    if (!$edit_tunnel):
+                    ?>
+                    <div class="alert alert-danger">隧道不存在</div>
+                    <div style="margin-top:20px;">
+                        <a href="index.php?action=tunnels" class="btn">← 返回隧道列表</a>
+                    </div>
+                    <?php else: ?>
+                    
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($success)): ?>
+                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                    <?php endif; ?>
+                    
+                    <form method="post" action="">
+                        <input type="hidden" name="action" value="edit_tunnel">
+                        <input type="hidden" name="tunnel_id" value="<?php echo $edit_tunnel['id']; ?>">
+                        
+                        <div class="form-group">
+                            <label class="form-label">隧道名称 *</label>
+                            <input type="text" name="name" class="form-input" placeholder="请输入隧道名称" value="<?php echo htmlspecialchars($_POST['name'] ?? $edit_tunnel['name']); ?>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">节点</label>
+                            <div style="padding:10px 12px; background:var(--info-light); border-radius:var(--radius-medium); font-size:14px; color:var(--text-regular);">
+                                <?php
+                                $stmt = db()->prepare("SELECT name FROM " . DB_PREFIX . "nodes WHERE id = ?");
+                                $stmt->execute([$edit_tunnel['node_id']]);
+                                $node = $stmt->fetch(PDO::FETCH_ASSOC);
+                                echo htmlspecialchars($node['name'] ?? '未知节点');
+                                ?>
+                                <span style="color:var(--text-secondary); font-size:12px; margin-left:8px;">（节点和类型创建后不可修改）</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">隧道类型</label>
+                            <div style="padding:10px 12px; background:var(--info-light); border-radius:var(--radius-medium); font-size:14px; color:var(--text-regular);">
+                                <span class="tag tag-primary" style="margin:0;"><?php echo strtoupper($edit_tunnel['type']); ?></span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">本地地址 *</label>
+                            <input type="text" name="local_addr" class="form-input" placeholder="默认 127.0.0.1" value="<?php echo htmlspecialchars($_POST['local_addr'] ?? $edit_tunnel['local_addr']); ?>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">本地端口 *</label>
+                            <input type="number" name="local_port" class="form-input" placeholder="例如：8080" value="<?php echo htmlspecialchars($_POST['local_port'] ?? $edit_tunnel['local_port']); ?>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">远程端口 *</label>
+                            <input type="number" name="remote_port" class="form-input" placeholder="10000-60000" value="<?php echo htmlspecialchars($_POST['remote_port'] ?? $edit_tunnel['remote_port']); ?>">
+                        </div>
+                        
+                        <div class="alert alert-info" style="margin-bottom:20px;">
+                            远程端口范围：10000 - 60000，请选择一个未被占用的端口
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-large btn-block">保存修改</button>
+                    </form>
+                    
+                    <div style="margin-top:20px;">
+                        <a href="index.php?action=tunnels" class="btn">← 返回隧道列表</a>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                
             <?php elseif ($action == 'tunnel_config'): ?>
                 <!-- 隧道配置 -->
                 <div class="card" style="max-width:700px;">
-                    <div class="card-title">📋 隧道配置</div>
+                    <div class="card-title">
+                        隧道配置
+                        <button onclick="copyConfig()" class="btn btn-small btn-primary" style="float:right;">复制配置</button>
+                    </div>
                     
                     <?php
                     $tunnel_id = intval($_GET['id'] ?? 0);
@@ -955,25 +1119,67 @@ function get_checkin_info($user_id) {
                         请将以下配置保存为 config.ini，然后使用客户端启动
                     </div>
                     
-                    <div style="background:#f5f7fa; padding:20px; border-radius:8px; font-family:monospace; font-size:13px; line-height:1.6; overflow-x:auto;">
+                    <div class="config-block" id="configContent">
 <pre>[common]
 server_addr = <?php echo htmlspecialchars($tunnel['node_host']); ?>
+
 server_port = <?php echo htmlspecialchars($tunnel['node_port']); ?>
+
 token = <?php echo htmlspecialchars($tunnel['node_token']); ?>
+
 
 [<?php echo htmlspecialchars($tunnel['name']); ?>]
 type = <?php echo htmlspecialchars($tunnel['type']); ?>
+
 local_addr = <?php echo htmlspecialchars($tunnel['local_addr']); ?>
+
 local_port = <?php echo htmlspecialchars($tunnel['local_port']); ?>
+
 remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     </div>
                     
                     <div style="margin-top:20px;">
                         <div class="form-group">
                             <label class="form-label">访问地址</label>
-                            <input type="text" class="form-input" value="<?php echo htmlspecialchars($tunnel['node_host']); ?>:<?php echo htmlspecialchars($tunnel['remote_port']); ?>" readonly>
+                            <div style="position:relative;">
+                                <input type="text" class="form-input" id="accessAddr" value="<?php echo htmlspecialchars($tunnel['node_host']); ?>:<?php echo htmlspecialchars($tunnel['remote_port']); ?>" readonly style="padding-right:80px;">
+                                <button onclick="copyAccessAddr()" class="btn btn-small" style="position:absolute; right:4px; top:4px;">复制</button>
+                            </div>
                         </div>
                     </div>
+                    
+                    <script>
+                    function copyConfig() {
+                        const configText = document.getElementById('configContent').innerText;
+                        navigator.clipboard.writeText(configText).then(() => {
+                            alert('配置已复制到剪贴板');
+                        }).catch(() => {
+                            // 降级方案
+                            const textarea = document.createElement('textarea');
+                            textarea.value = configText;
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                            alert('配置已复制到剪贴板');
+                        });
+                    }
+                    
+                    function copyAccessAddr() {
+                        const addr = document.getElementById('accessAddr').value;
+                        navigator.clipboard.writeText(addr).then(() => {
+                            alert('访问地址已复制');
+                        }).catch(() => {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = addr;
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                            alert('访问地址已复制');
+                        });
+                    }
+                    </script>
                     
                     <div style="margin-top:20px;">
                         <a href="index.php?action=tunnels" class="btn">← 返回隧道列表</a>
@@ -994,7 +1200,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
             <?php elseif ($action == 'tunnels'): ?>
                 <!-- 隧道管理 -->
                 <div class="action-bar">
-                    <div class="action-bar-title">🔌 我的隧道</div>
+                    <div class="action-bar-title">我的隧道</div>
                     <a href="index.php?action=create_tunnel" class="btn btn-primary">+ 创建隧道</a>
                 </div>
 
@@ -1002,50 +1208,61 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                 $tunnels = get_user_tunnels($current_user['id']);
                 if ($tunnels):
                 ?>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>隧道名称</th>
-                            <th>节点</th>
-                            <th>类型</th>
-                            <th>本地地址</th>
-                            <th>远程端口</th>
-                            <th>流量</th>
-                            <th>状态</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($tunnels as $tunnel): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($tunnel['name']); ?></td>
-                            <td><?php echo htmlspecialchars($tunnel['node_name'] ?: '-'); ?></td>
-                            <td><span class="tag tag-primary"><?php echo strtoupper($tunnel['type']); ?></span></td>
-                            <td><?php echo htmlspecialchars($tunnel['local_addr']); ?>:<?php echo htmlspecialchars($tunnel['local_port']); ?></td>
-                            <td><?php echo htmlspecialchars($tunnel['remote_port']); ?></td>
-                            <td><?php echo format_traffic($tunnel['traffic']); ?></td>
-                            <td>
-                                <?php if ($tunnel['status'] == 1): ?>
-                                <span class="tag tag-success">启用</span>
-                                <?php else: ?>
-                                <span class="tag tag-info">禁用</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <a href="index.php?action=tunnel_config&id=<?php echo $tunnel['id']; ?>" class="btn btn-small">配置</a>
-                                <form method="post" action="" style="display:inline;" onsubmit="return confirm('确定要删除这个隧道吗？');">
-                                    <input type="hidden" name="action" value="delete_tunnel">
-                                    <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
-                                    <button type="submit" class="btn btn-small btn-danger">删除</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="tunnel-grid">
+                    <?php foreach ($tunnels as $tunnel): ?>
+                    <div class="tunnel-card <?php echo $tunnel['status'] == 0 ? 'tunnel-disabled' : ''; ?>">
+                        <div class="tunnel-card-header">
+                            <div class="tunnel-name"><?php echo htmlspecialchars($tunnel['name']); ?></div>
+                            <form method="post" action="" style="display:inline;">
+                                <input type="hidden" name="action" value="toggle_tunnel">
+                                <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
+                                <button type="submit" class="tunnel-switch <?php echo $tunnel['status'] == 1 ? 'active' : ''; ?>" title="<?php echo $tunnel['status'] == 1 ? '点击禁用' : '点击启用'; ?>">
+                                    <span class="switch-slider"></span>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="tunnel-card-body">
+                            <div class="tunnel-info">
+                                <span class="tunnel-info-label">节点</span>
+                                <span class="tunnel-info-value"><?php echo htmlspecialchars($tunnel['node_name'] ?: '-'); ?></span>
+                            </div>
+                            <div class="tunnel-info">
+                                <span class="tunnel-info-label">类型</span>
+                                <span class="tag tag-primary" style="margin:0;"><?php echo strtoupper($tunnel['type']); ?></span>
+                            </div>
+                            <div class="tunnel-info">
+                                <span class="tunnel-info-label">本地地址</span>
+                                <span class="tunnel-info-value mono"><?php echo htmlspecialchars($tunnel['local_addr']); ?>:<?php echo htmlspecialchars($tunnel['local_port']); ?></span>
+                            </div>
+                            <div class="tunnel-info">
+                                <span class="tunnel-info-label">远程端口</span>
+                                <span class="tunnel-info-value mono"><?php echo htmlspecialchars($tunnel['remote_port']); ?></span>
+                            </div>
+                            <div class="tunnel-info">
+                                <span class="tunnel-info-label">已用流量</span>
+                                <span class="tunnel-info-value"><?php echo format_traffic($tunnel['traffic']); ?></span>
+                            </div>
+                        </div>
+                        <div class="tunnel-card-footer">
+                            <a href="index.php?action=tunnel_config&id=<?php echo $tunnel['id']; ?>" class="btn btn-small">查看配置</a>
+                            <a href="index.php?action=edit_tunnel&id=<?php echo $tunnel['id']; ?>" class="btn btn-small">编辑</a>
+                            <form method="post" action="" style="display:inline;" onsubmit="return confirm('确定要删除这个隧道吗？');">
+                                <input type="hidden" name="action" value="delete_tunnel">
+                                <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
+                                <button type="submit" class="btn btn-small btn-danger">删除</button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
                 <?php else: ?>
                 <div class="empty">
-                    <div class="empty-icon">🔌</div>
+                    <div class="empty-icon" style="width:64px; height:64px; background:var(--info-light); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px; color:var(--text-secondary);">
+                        <span style="width:24px; height:24px; border:2px solid currentColor; border-radius:4px; position:relative;">
+                            <span style="position:absolute; top:6px; left:3px; width:18px; height:2px; background:currentColor;"></span>
+                            <span style="position:absolute; top:12px; left:3px; width:18px; height:2px; background:currentColor;"></span>
+                        </span>
+                    </div>
                     <div class="empty-text">暂无隧道，点击上方按钮创建</div>
                     <a href="index.php?action=create_tunnel" class="btn btn-primary">创建第一个隧道</a>
                 </div>

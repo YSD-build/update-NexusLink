@@ -1744,3 +1744,150 @@ a:hover {
     width: 28px;
     height: 28px;
 }
+
+/* 等宽字体 */
+.mono {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* 隧道卡片网格 */
+.tunnel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+/* 隧道卡片 */
+.tunnel-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-large);
+    box-shadow: var(--glass-shadow);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.tunnel-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.1);
+}
+
+.tunnel-disabled {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+}
+
+/* 卡片头部 */
+.tunnel-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.tunnel-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* 开关按钮 */
+.tunnel-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--text-disabled);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    padding: 0;
+}
+
+.tunnel-switch.active {
+    background: var(--primary-color);
+}
+
+.switch-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tunnel-switch.active .switch-slider {
+    transform: translateX(20px);
+}
+
+/* 卡片内容 */
+.tunnel-card-body {
+    padding: 16px 20px;
+}
+
+.tunnel-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border-light);
+}
+
+.tunnel-info:last-child {
+    border-bottom: none;
+}
+
+.tunnel-info-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.tunnel-info-value {
+    font-size: 14px;
+    color: var(--text-regular);
+    font-weight: 500;
+}
+
+/* 卡片底部 */
+.tunnel-card-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px 16px;
+}
+
+.tunnel-card-footer .btn {
+    flex: 1;
+    text-align: center;
+}
+
+/* 配置代码块 */
+.config-block {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: var(--radius-medium);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-x: auto;
+}
+
+.config-block pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 响应式：移动端隧道卡片改为单列 */
+@media (max-width: 768px) {
+    .tunnel-grid {
+        grid-template-columns: 1fr;
+    }
+}
