@@ -93,7 +93,12 @@ if (!$current_user || $current_user['role'] != 'admin'):
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NexusLink管理后台">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="format-detection" content="telephone=no">
     <title>管理后台 - NexusLink</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -210,7 +215,12 @@ $stats = get_admin_stats();
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NexusLink管理后台">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="format-detection" content="telephone=no">
     <title>管理后台 - NexusLink</title>
     <link rel="stylesheet" href="style.css">
     <style>
