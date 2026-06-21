@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusLink 内网穿透平台</title>
+    <link rel="stylesheet" href="assets/element-plus.min.css">
+    <style>
+        [v-cloak] { display: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; }
+        
+        /* 登录页 - 白色简约风格 */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 400px;
+        }
+        .login-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 8px;
+        }
+        .login-subtitle {
+            text-align: center;
+            color: #909399;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        /* 主布局 */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 220px;
+            background: #001529;
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .sidebar-logo {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #1f2d3d;
+        }
+        .sidebar-logo h2 { color: white; font-size: 18px; }
+        .sidebar-menu { padding: 10px 0; }
+        .menu-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            color: #a6b0c3;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .menu-item:hover { background: #1f2d3d; color: white; }
+        .menu-item.active { background: #409eff; color: white; }
+        .menu-item .icon { font-size: 18px; }
+        
+        .main-content {
+            margin-left: 220px;
+            flex: 1;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .header-title { font-size: 20px; font-weight: 600; color: #303133; }
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #ebeef5;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-label { color: #909399; font-size: 14px; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 600; color: #303133; }
+        .stat-card.blue .stat-value { color: #409eff; }
+        .stat-card.green .stat-value { color: #67c23a; }
+        .stat-card.orange .stat-value { color: #e6a23c; }
+        .stat-card.red .stat-value { color: #f56c6c; }
+        
+        /* 节点卡片 */
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .node-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 4px solid #409eff;
+            transition: transform 0.2s;
+        }
+        .node-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        .node-name { font-size: 18px; font-weight: 600; color: #303133; margin-bottom: 8px; }
+        .node-location { color: #909399; font-size: 13px; margin-bottom: 12px; }
+        .node-info { font-size: 13px; color: #606266; line-height: 1.8; }
+        .node-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: #f0f9eb; color: #67c23a; }
+        .node-desc { color: #909399; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ebeef5; }
+        
+        /* 隧道配置 */
+        .config-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- 登录页 -->
+        <div v-if="!isLoggedIn" class="login-container">
+            <div class="login-box">
+                <div class="login-title">NexusLink</div>
+                <div class="login-subtitle">内网穿透平台</div>
+                <el-form :model="loginForm" label-width="0">
+                    <el-form-item>
+                        <el-input v-model="loginForm.username" placeholder="邮箱" size="large"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-input v-model="loginForm.password" type="password" placeholder="密码" size="large" @keyup.enter="handleLogin"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" size="large" style="width:100%" @click="handleLogin" :loading="loggingIn">登 录</el-button>
+                    </el-form-item>
+                </el-form>
+                <div style="text-align:right; margin-bottom:20px;">
+                    <a href="#" @click="showForgotPassword = true" style="color:#909399; font-size:12px; text-decoration:none;">忘记密码？</a>
+                </div>
+                <div style="text-align:center; color:#909399; font-size:12px;">
+                    还没有账号？<a href="#" @click="showRegister = true">立即注册</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主界面 -->
+        <div v-else class="layout">
+            <!-- 侧边栏 -->
+            <div class="sidebar">
+                <div class="sidebar-logo">
+                    <h2>🔗 NexusLink</h2>
+                </div>
+                <div class="sidebar-menu">
+                    <div class="menu-item" :class="{active: currentPage=='dashboard'}" @click="currentPage='dashboard'">
+                        <span class="icon">📊</span> 仪表盘
+                    </div>
+                    <div class="menu-item" :class="{active: currentPage=='nodes'}" @click="currentPage='nodes'">
+                        <span class="icon">🖥️</span> 节点列表
+                    </div>
+                    <div class="menu-item" :class="{active: currentPage=='tunnels'}" @click="currentPage='tunnels'; loadTunnels()">
+                        <span class="icon">🔌</span> 我的隧道
+                    </div>
+                    <div class="menu-item" :class="{active: currentPage=='profile'}" @click="currentPage='profile'">
+                        <span class="icon">👤</span> 个人中心
+                    </div>
+                    <div v-if="userInfo.role == 'admin'" class="menu-item" :class="{active: currentPage=='admin'}" @click="currentPage='admin'">
+                        <span class="icon">⚙️</span> 管理后台
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主内容 -->
+            <div class="main-content">
+                <div class="header">
+                    <div class="header-title">{{ pageTitle }}</div>
+                    <div class="user-info">
+                        <span>{{ userInfo.nickname || userInfo.username }}</span>
+                        <el-button type="text" @click="handleLogout">退出</el-button>
+                    </div>
+                </div>
+
+                <!-- 仪表盘 -->
+                <div v-if="currentPage=='dashboard'">
+                    <div class="stats-grid">
+                        <div class="stat-card blue">
+                            <div class="stat-label">我的隧道</div>
+                            <div class="stat-value">{{ stats.tunnelCount }}</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-label">在线节点</div>
+                            <div class="stat-value">{{ stats.nodeCount }}</div>
+                        </div>
+                        <div class="stat-card orange">
+                            <div class="stat-label">已用流量</div>
+                            <div class="stat-value">{{ formatTraffic(userInfo.traffic) }}</div>
+                        </div>
+                        <div class="stat-card red">
+                            <div class="stat-label">剩余流量</div>
+                            <div class="stat-value">{{ userInfo.traffic_limit ? formatTraffic(userInfo.traffic_limit - userInfo.traffic) : '不限' }}</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">欢迎使用 NexusLink 内网穿透平台</div>
+                        <p style="color:#606266; line-height:1.8;">
+                            NexusLink 是一款高性能的内网穿透工具，支持TCP/UDP协议转发，每数据包HMAC-SHA256认证，安全可靠。
+                        </p>
+                        <div style="margin-top:20px;">
+                            <el-button type="primary" @click="currentPage='tunnels'; showCreateTunnel=true">创建隧道</el-button>
+                            <el-button @click="currentPage='nodes'">查看节点</el-button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 节点列表 -->
+                <div v-if="currentPage=='nodes'">
+                    <div class="node-grid">
+                        <div v-for="node in nodes" :key="node.id" class="node-card">
+                            <div class="node-name">{{ node.name }}</div>
+                            <div class="node-location">📍 {{ node.location }}</div>
+                            <div class="node-info">
+                                <div>地址: {{ node.host }}:{{ node.port }}</div>
+                                <div>端口范围: {{ node.min_port }} - {{ node.max_port }}</div>
+                                <div><span class="node-status">● 在线</span></div>
+                            </div>
+                            <div class="node-desc">{{ node.description }}</div>
+                            <div style="margin-top:12px;">
+                                <el-button type="primary" size="small" @click="createTunnelFromNode(node)">创建隧道</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 我的隧道 -->
+                <div v-if="currentPage=='tunnels'">
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="card-title" style="margin:0; padding:0; border:none;">我的隧道 ({{ tunnels.length }})</div>
+                        <el-button type="primary" @click="showCreateTunnel = true">+ 创建隧道</el-button>
+                    </div>
+                    
+                    <div v-if="tunnels.length == 0" class="card" style="text-align:center; padding:60px;">
+                        <div style="font-size:48px; margin-bottom:16px;">🔌</div>
+                        <div style="color:#909399; margin-bottom:16px;">暂无隧道，点击上方按钮创建</div>
+                        <el-button type="primary" @click="showCreateTunnel = true">创建第一个隧道</el-button>
+                    </div>
+                    
+                    <el-table v-else :data="tunnels" style="width: 100%" stripe>
+                        <el-table-column prop="name" label="隧道名称" width="150"></el-table-column>
+                        <el-table-column prop="node.name" label="节点" width="150"></el-table-column>
+                        <el-table-column prop="type" label="类型" width="80">
+                            <template #default="scope">
+                                <el-tag size="small">{{ scope.row.type.toUpperCase() }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="本地地址" width="150">
+                            <template #default="scope">
+                                {{ scope.row.local_addr }}:{{ scope.row.local_port }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="remote_port" label="远程端口" width="100"></el-table-column>
+                        <el-table-column label="流量" width="120">
+                            <template #default="scope">
+                                {{ formatTraffic(scope.row.traffic) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="状态" width="80">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.status == 1" type="success" size="small">启用</el-tag>
+                                <el-tag v-else type="info" size="small">禁用</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="200">
+                            <template #default="scope">
+                                <el-button size="small" @click="showConfig(scope.row)">配置</el-button>
+                                <el-button size="small" type="danger" @click="deleteTunnel(scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 个人中心 -->
+                <div v-if="currentPage=='profile'" class="card" style="max-width:600px;">
+                    <div class="card-title">个人信息</div>
+                    <el-form label-width="100px">
+                        <el-form-item label="用户名">
+                            <el-input v-model="userInfo.username" disabled></el-input>
+                        </el-form-item>
+                        <el-form-item label="昵称">
+                            <el-input v-model="userInfo.nickname"></el-input>
+                        </el-form-item>
+                        <el-form-item label="邮箱">
+                            <el-input v-model="userInfo.email"></el-input>
+                        </el-form-item>
+                        <el-form-item label="角色">
+                            <el-tag>{{ userInfo.role == 'admin' ? '管理员' : '普通用户' }}</el-tag>
+                        </el-form-item>
+                        <el-form-item label="已用流量">
+                            <span>{{ formatTraffic(userInfo.traffic) }}</span>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary">保存修改</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+
+                <!-- 管理后台 -->
+                <div v-if="currentPage=='admin' && userInfo.role == 'admin'">
+                    <div class="card">
+                        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>节点管理</span>
+                            <el-button type="primary" size="small" @click="showCreateNode = true">+ 添加节点</el-button>
+                        </div>
+                        <el-table :data="nodes" style="width: 100%" stripe>
+                            <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                            <el-table-column prop="name" label="节点名称"></el-table-column>
+                            <el-table-column prop="host" label="地址"></el-table-column>
+                            <el-table-column prop="port" label="端口" width="80"></el-table-column>
+                            <el-table-column prop="location" label="位置"></el-table-column>
+                            <el-table-column label="状态" width="80">
+                                <template #default="scope">
+                                    <el-tag v-if="scope.row.status == 1" type="success" size="small">在线</el-tag>
+                                    <el-tag v-else type="danger" size="small">离线</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template #default="scope">
+                                    <el-button size="small">编辑</el-button>
+                                    <el-button size="small" type="danger">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 创建隧道弹窗 -->
+        <el-dialog v-model="showCreateTunnel" title="创建隧道" width="500px">
+            <el-form :model="tunnelForm" label-width="100px">
+                <el-form-item label="节点ID">
+                    <el-input v-model="tunnelForm.node_id" placeholder="请输入节点ID"></el-input>
+                </el-form-item>
+                <el-form-item label="隧道名称">
+                    <el-input v-model="tunnelForm.name" placeholder="例如：Minecraft服务器"></el-input>
+                </el-form-item>
+                <el-form-item label="协议类型">
+                    <el-radio-group v-model="tunnelForm.type">
+                        <el-radio value="tcp">TCP</el-radio>
+                        <el-radio value="udp">UDP</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="本地地址">
+                    <el-input v-model="tunnelForm.local_addr" placeholder="127.0.0.1"></el-input>
+                </el-form-item>
+                <el-form-item label="本地端口">
+                    <el-input v-model.number="tunnelForm.local_port" placeholder="例如：25565"></el-input>
+                </el-form-item>
+                <el-form-item label="远程端口">
+                    <el-input v-model.number="tunnelForm.remote_port" placeholder="留空自动分配"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showCreateTunnel = false">取消</el-button>
+                <el-button type="primary" @click="createTunnel" :loading="creatingTunnel">创建</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 配置弹窗 -->
+        <el-dialog v-model="showConfigDialog" title="客户端配置" width="600px">
+            <div v-if="currentConfig">
+                <p style="color:#606266; margin-bottom:12px;">
+                    将以下配置保存为 <code>client.yaml</code>，然后启动客户端：
+                    <code>./nexuslink-client -c client.yaml</code>
+                </p>
+                <div class="config-box">{{ currentConfig }}</div>
+                <div style="margin-top:16px; text-align:right;">
+                    <el-button type="primary" @click="copyConfig">复制配置</el-button>
+                </div>
+            </div>
+        </el-dialog>
+
+        <!-- 创建节点弹窗（管理员） -->
+        <el-dialog v-model="showCreateNode" title="添加节点" width="500px">
+            <el-form :model="nodeForm" label-width="100px">
+                <el-form-item label="节点名称">
+                    <el-input v-model="nodeForm.name" placeholder="例如：广州电信节点"></el-input>
+                </el-form-item>
+                <el-form-item label="节点地址">
+                    <el-input v-model="nodeForm.host" placeholder="例如：gz.example.com"></el-input>
+                </el-form-item>
+                <el-form-item label="服务端口">
+                    <el-input v-model.number="nodeForm.port" placeholder="7000"></el-input>
+                </el-form-item>
+                <el-form-item label="Token">
+                    <el-input v-model="nodeForm.token" placeholder="节点认证密钥"></el-input>
+                </el-form-item>
+                <el-form-item label="位置">
+                    <el-input v-model="nodeForm.location" placeholder="例如：广东广州"></el-input>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="nodeForm.description" type="textarea" :rows="2"></el-input>
+                </el-form-item>
+                <el-form-item label="端口范围">
+                    <el-input v-model.number="nodeForm.min_port" placeholder="最小端口" style="width:45%;"></el-input>
+                    <span style="margin:0 10px;">-</span>
+                    <el-input v-model.number="nodeForm.max_port" placeholder="最大端口" style="width:45%;"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showCreateNode = false">取消</el-button>
+                <el-button type="primary" @click="createNode">添加</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 注册弹窗 -->
+        <el-dialog v-model="showRegister" title="用户注册" width="400px">
+            <el-form :model="registerForm" label-width="80px">
+                <el-form-item label="用户名">
+                    <el-input v-model="registerForm.username" placeholder="3-50位字母数字下划线" />
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="registerForm.password" type="password" placeholder="6-50位" show-password />
+                </el-form-item>
+                <el-form-item label="确认密码">
+                    <el-input v-model="registerForm.confirmPassword" type="password" placeholder="再次输入密码" show-password />
+                </el-form-item>
+                <el-form-item label="昵称">
+                    <el-input v-model="registerForm.nickname" placeholder="可选" />
+                </el-form-item>
+                <el-form-item label="邮箱">
+                    <el-input v-model="registerForm.email" placeholder="用于找回密码" />
+                </el-form-item>
+            </el-form>
+            <div style="background:#f0f9ff; padding:12px; border-radius:6px; margin-bottom:10px;">
+                <p style="color:#0369a1; font-size:13px; margin:0;">
+                    💡 注册后请验证邮箱，以便找回密码和接收重要通知
+                </p>
+            </div>
+            <template #footer>
+                <el-button @click="showRegister = false">取消</el-button>
+                <el-button type="primary" @click="handleRegister" :loading="registering">注册</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 找回密码弹窗 -->
+        <el-dialog v-model="showForgotPassword" title="找回密码" width="400px">
+            <div v-if="forgotStep == 1">
+                <p style="color:#606266; margin-bottom:20px;">
+                    请输入您注册时使用的邮箱，我们将发送重置密码的链接到您的邮箱。
+                </p>
+                <el-form :model="forgotForm" label-width="0">
+                    <el-form-item>
+                        <el-input v-model="forgotForm.email" placeholder="请输入邮箱地址" size="large" />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <el-button @click="showForgotPassword = false">取消</el-button>
+                    <el-button type="primary" @click="handleForgotPassword" :loading="sendingForgotEmail">发送重置链接</el-button>
+                </template>
+            </div>
+            <div v-else-if="forgotStep == 2">
+                <div style="text-align:center; padding:20px 0;">
+                    <div style="font-size:48px; margin-bottom:16px;">📧</div>
+                    <h3 style="color:#303133; margin-bottom:8px;">重置邮件已发送</h3>
+                    <p style="color:#909399;">
+                        我们已向 <strong>{{ forgotForm.email }}</strong> 发送了重置密码邮件，<br>
+                        请查收并点击邮件中的链接重置密码。
+                    </p>
+                    <div style="margin-top:20px; padding:12px; background:#fef3c7; border-radius:6px;">
+                        <p style="color:#92400e; font-size:13px; margin:0;">
+                            ⚠️ 如果没有收到邮件，请检查垃圾邮件文件夹，或稍后重试
+                        </p>
+                    </div>
+                </div>
+                <template #footer>
+                    <el-button type="primary" @click="showForgotPassword = false">我知道了</el-button>
+                </template>
+            </div>
+        </el-dialog>
+
+        <!-- 重置密码弹窗 -->
+        <el-dialog v-model="showResetPassword" title="重置密码" width="400px">
+            <el-form :model="resetForm" label-width="80px">
+                <el-form-item label="新密码">
+                    <el-input v-model="resetForm.password" type="password" placeholder="6-50位" show-password />
+                </el-form-item>
+                <el-form-item label="确认密码">
+                    <el-input v-model="resetForm.confirmPassword" type="password" placeholder="再次输入密码" show-password />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showResetPassword = false">取消</el-button>
+                <el-button type="primary" @click="handleResetPassword" :loading="resettingPassword">确认重置</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script src="assets/vue.global.prod.js"></script>
+    <script src="assets/element-plus.full.min.js"></script>
+    <script>
+        // 兼容不同版本的全局变量名
+        window.ElementPlus = window.ElementPlus || window.ELEMENT;
+        const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+        const API_BASE = 'api';
+
+        const app = createApp({
+            setup() {
+                const isLoggedIn = ref(false);
+                const currentPage = ref('dashboard');
+                const loggingIn = ref(false);
+                const creatingTunnel = ref(false);
+                const showCreateTunnel = ref(false);
+                const showCreateNode = ref(false);
+                const showConfigDialog = ref(false);
+                const showRegister = ref(false);
+                const registering = ref(false);
+                const showForgotPassword = ref(false);
+                const showResetPassword = ref(false);
+                const forgotStep = ref(1);
+                const sendingForgotEmail = ref(false);
+                const resettingPassword = ref(false);
+                const currentConfig = ref('');
+                
+                const loginForm = reactive({ username: '', password: '' });
+                const registerForm = reactive({ username: '', password: '', confirmPassword: '', nickname: '', email: '' });
+                const forgotForm = reactive({ email: '' });
+                const resetForm = reactive({ password: '', confirmPassword: '', token: '' });
+                const userInfo = reactive({ id: 0, username: '', nickname: '', role: 'user', traffic: 0, traffic_limit: 0 });
+                const nodes = ref([]);
+                const tunnels = ref([]);
+                const stats = reactive({ tunnelCount: 0, nodeCount: 0 });
+                
+                const tunnelForm = reactive({
+                    node_id: null,
+                    name: '',
+                    type: 'tcp',
+                    local_addr: '127.0.0.1',
+                    local_port: null,
+                    remote_port: null
+                });
+                
+                const nodeForm = reactive({
+                    name: '',
+                    host: '',
+                    port: 7000,
+                    token: '',
+                    location: '',
+                    description: '',
+                    min_port: 10000,
+                    max_port: 60000
+                });
+
+                const pageTitle = computed(() => {
+                    const titles = {
+                        dashboard: '仪表盘',
+                        nodes: '节点列表',
+                        tunnels: '我的隧道',
+                        profile: '个人中心',
+                        admin: '管理后台'
+                    };
+                    return titles[currentPage.value] || '仪表盘';
+                });
+
+                const getToken = () => localStorage.getItem('nexuslink_token') || '';
+                const setToken = (token) => localStorage.setItem('nexuslink_token', token);
+                const removeToken = () => localStorage.removeItem('nexuslink_token');
+
+                const formatTraffic = (bytes) => {
+                    if (!bytes) return '0 B';
+                    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    let i = 0;
+                    while (bytes >= 1024 && i < units.length - 1) {
+                        bytes /= 1024;
+                        i++;
+                    }
+                    return bytes.toFixed(2) + ' ' + units[i];
+                };
+
+                const handleLogin = async () => {
+                    if (!loginForm.username || !loginForm.password) {
+                        ElementPlus.ElMessage.warning('请输入邮箱和密码');
+                        return;
+                    }
+                    loggingIn.value = true;
+                    try {
+                        const res = await fetch(API_BASE + '/auth.php?action=login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(loginForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            setToken(data.token);
+                            userInfo.id = data.user.id;
+                            userInfo.username = data.user.username;
+                            userInfo.nickname = data.user.nickname;
+                            userInfo.role = data.user.role;
+                            isLoggedIn.value = true;
+                            loadNodes();
+                            loadUserInfo();
+                            ElementPlus.ElMessage.success('登录成功');
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '登录失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                    loggingIn.value = false;
+                };
+
+                const handleRegister = async () => {
+                    if (!registerForm.username || !registerForm.password) {
+                        ElementPlus.ElMessage.warning('请输入用户名和密码');
+                        return;
+                    }
+                    if (registerForm.password !== registerForm.confirmPassword) {
+                        ElementPlus.ElMessage.warning('两次输入的密码不一致');
+                        return;
+                    }
+                    registering.value = true;
+                    try {
+                        const res = await fetch(API_BASE + '/auth.php?action=register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(registerForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            ElementPlus.ElMessage.success('注册成功，请登录');
+                            showRegister.value = false;
+                            // 自动填充登录表单
+                            loginForm.username = registerForm.username;
+                            loginForm.password = registerForm.password;
+                            // 清空注册表单
+                            registerForm.username = '';
+                            registerForm.password = '';
+                            registerForm.confirmPassword = '';
+                            registerForm.nickname = '';
+                            registerForm.email = '';
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '注册失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                    registering.value = false;
+                };
+
+                const handleForgotPassword = async () => {
+                    if (!forgotForm.email) {
+                        ElementPlus.ElMessage.warning('请输入邮箱地址');
+                        return;
+                    }
+                    sendingForgotEmail.value = true;
+                    try {
+                        const res = await fetch(API_BASE + '/auth.php?action=forgot', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(forgotForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            forgotStep.value = 2;
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '发送失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                    sendingForgotEmail.value = false;
+                };
+
+                const handleResetPassword = async () => {
+                    if (!resetForm.password || !resetForm.confirmPassword) {
+                        ElementPlus.ElMessage.warning('请输入密码');
+                        return;
+                    }
+                    if (resetForm.password !== resetForm.confirmPassword) {
+                        ElementPlus.ElMessage.warning('两次输入的密码不一致');
+                        return;
+                    }
+                    resettingPassword.value = true;
+                    try {
+                        const res = await fetch(API_BASE + '/auth.php?action=reset', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(resetForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            ElementPlus.ElMessage.success('密码重置成功，请登录');
+                            showResetPassword.value = false;
+                            showForgotPassword.value = false;
+                            forgotStep.value = 1;
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '重置失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                    resettingPassword.value = false;
+                };
+
+                const handleLogout = () => {
+                    removeToken();
+                    isLoggedIn.value = false;
+                    loginForm.username = '';
+                    loginForm.password = '';
+                    ElementPlus.ElMessage.success('已退出登录');
+                };
+
+                const loadUserInfo = async () => {
+                    try {
+                        const res = await fetch(API_BASE + '/user.php?action=info', {
+                            headers: { 'Authorization': 'Bearer ' + getToken() }
+                        });
+                        const data = await res.json();
+                        if (data.success && data.user) {
+                            Object.assign(userInfo, data.user);
+                            stats.tunnelCount = data.user.tunnel_count || 0;
+                        }
+                    } catch (e) {}
+                };
+
+                const loadNodes = async () => {
+                    try {
+                        const res = await fetch(API_BASE + '/node.php?action=list');
+                        const data = await res.json();
+                        nodes.value = data.nodes || [];
+                        stats.nodeCount = data.total || 0;
+                    } catch (e) {}
+                };
+
+                const loadTunnels = async () => {
+                    try {
+                        const res = await fetch(API_BASE + '/tunnel.php?action=list', {
+                            headers: { 'Authorization': 'Bearer ' + getToken() }
+                        });
+                        const data = await res.json();
+                        tunnels.value = data.tunnels || [];
+                    } catch (e) {}
+                };
+
+                const createTunnelFromNode = (node) => {
+                    tunnelForm.node_id = node.id;
+                    showCreateTunnel.value = true;
+                };
+
+                const createTunnel = async () => {
+                    if (!tunnelForm.node_id || !tunnelForm.name || !tunnelForm.local_port) {
+                        ElementPlus.ElMessage.warning('请填写完整信息');
+                        return;
+                    }
+                    creatingTunnel.value = true;
+                    try {
+                        const res = await fetch(API_BASE + '/tunnel.php?action=create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + getToken()
+                            },
+                            body: JSON.stringify(tunnelForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            ElementPlus.ElMessage.success('隧道创建成功');
+                            showCreateTunnel.value = false;
+                            loadTunnels();
+                            loadUserInfo();
+                            // 显示配置
+                            currentConfig.value = data.config;
+                            showConfigDialog.value = true;
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '创建失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                    creatingTunnel.value = false;
+                };
+
+                const deleteTunnel = async (tunnel) => {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm(
+                            `确定要删除隧道「${tunnel.name}」吗？`,
+                            '确认删除',
+                            { type: 'warning' }
+                        );
+                        const res = await fetch(API_BASE + '/tunnel.php?action=delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + getToken()
+                            },
+                            body: JSON.stringify({ id: tunnel.id })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            ElementPlus.ElMessage.success('删除成功');
+                            loadTunnels();
+                            loadUserInfo();
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '删除失败');
+                        }
+                    } catch (e) {
+                        if (e !== 'cancel') {
+                            ElementPlus.ElMessage.error('操作取消');
+                        }
+                    }
+                };
+
+                const showConfig = async (tunnel) => {
+                    try {
+                        const res = await fetch(API_BASE + '/tunnel.php?action=config&id=' + tunnel.id, {
+                            headers: { 'Authorization': 'Bearer ' + getToken() }
+                        });
+                        const data = await res.json();
+                        if (data.config) {
+                            currentConfig.value = data.config;
+                            showConfigDialog.value = true;
+                        }
+                    } catch (e) {}
+                };
+
+                const copyConfig = () => {
+                    navigator.clipboard.writeText(currentConfig.value);
+                    ElementPlus.ElMessage.success('配置已复制');
+                };
+
+                const createNode = async () => {
+                    if (!nodeForm.name || !nodeForm.host || !nodeForm.token) {
+                        ElementPlus.ElMessage.warning('请填写必填信息');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(API_BASE + '/admin.php?action=node_create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + getToken()
+                            },
+                            body: JSON.stringify(nodeForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            ElementPlus.ElMessage.success('节点添加成功');
+                            showCreateNode.value = false;
+                            loadNodes();
+                        } else {
+                            ElementPlus.ElMessage.error(data.error || '添加失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    }
+                };
+
+                // 检查登录状态
+                onMounted(() => {
+                    const token = getToken();
+                    if (token) {
+                        // 验证token
+                        loadUserInfo().then(() => {
+                            if (userInfo.id) {
+                                isLoggedIn.value = true;
+                                loadNodes();
+                            }
+                        });
+                    }
+                });
+
+                return {
+                    isLoggedIn, currentPage, loggingIn, creatingTunnel, registering,
+                    showCreateTunnel, showCreateNode, showConfigDialog, showRegister,
+                    showForgotPassword, showResetPassword, forgotStep, sendingForgotEmail, resettingPassword,
+                    currentConfig, loginForm, registerForm, forgotForm, resetForm, userInfo, nodes, tunnels, stats,
+                    tunnelForm, nodeForm, pageTitle,
+                    handleLogin, handleRegister, handleForgotPassword, handleResetPassword, handleLogout, formatTraffic,
+                    loadNodes, loadTunnels, createTunnelFromNode,
+                    createTunnel, deleteTunnel, showConfig, copyConfig, createNode
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

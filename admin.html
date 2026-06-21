@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusLink 管理后台</title>
+    <link rel="stylesheet" href="assets/element-plus.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            color: #303133;
+        }
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 220px;
+            background: #001529;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .sidebar-logo {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #1f2d3d;
+            color: #fff;
+        }
+        .sidebar-menu {
+            padding: 12px 0;
+        }
+        .menu-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255,255,255,0.75);
+        }
+        .menu-item:hover {
+            background: #1f2d3d;
+            color: #fff;
+        }
+        .menu-item.active {
+            background: #409eff;
+            color: #fff;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .content {
+            flex: 1;
+            padding: 24px;
+            overflow: auto;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .stat-label {
+            color: #909399;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #303133;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-box {
+            width: 400px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .login-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #303133;
+        }
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .sidebar {
+                width: 60px;
+            }
+            .sidebar-logo span, .menu-item span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- 登录页 -->
+    <div v-if="!isLoggedIn" class="login-page">
+        <div class="login-box">
+            <div class="login-title">NexusLink 管理后台</div>
+            <el-form :model="loginForm" label-width="80px">
+                <el-form-item label="用户名">
+                    <el-input v-model="loginForm.username" placeholder="请输入管理员账号" />
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password @keyup.enter="doLogin" />
+                </el-form-item>
+            </el-form>
+            <el-button type="primary" style="width: 100%;" @click="doLogin" :loading="loggingIn">登录</el-button>
+        </div>
+    </div>
+
+    <!-- 后台布局 -->
+    <div v-else class="layout">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <span>NexusLink 管理</span>
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-item" :class="{ active: currentPage == 'dashboard' }" @click="currentPage = 'dashboard'">
+                    <span>📊 仪表盘</span>
+                </div>
+                <div class="menu-item" :class="{ active: currentPage == 'nodes' }" @click="currentPage = 'nodes'">
+                    <span>🖥️ 节点管理</span>
+                </div>
+                <div class="menu-item" :class="{ active: currentPage == 'users' }" @click="currentPage = 'users'">
+                    <span>👤 用户管理</span>
+                </div>
+                <div class="menu-item" :class="{ active: currentPage == 'tunnels' }" @click="currentPage = 'tunnels'">
+                    <span>🔌 隧道管理</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容 -->
+        <div class="main">
+            <div class="header">
+                <div class="header-title">{{ pageTitle }}</div>
+                <div>
+                    <el-button @click="logout">退出登录</el-button>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- 仪表盘 -->
+                <div v-if="currentPage == 'dashboard'">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">用户总数</div>
+                            <div class="stat-value">{{ stats.user_count || 0 }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">节点总数</div>
+                            <div class="stat-value">{{ stats.node_count || 0 }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">隧道总数</div>
+                            <div class="stat-value">{{ stats.tunnel_count || 0 }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">总流量</div>
+                            <div class="stat-value" style="font-size: 22px;">{{ stats.total_traffic_text || '0 B' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">系统信息</div>
+                        </div>
+                        <el-descriptions :column="2" border>
+                            <el-descriptions-item label="平台版本">v0.1.0</el-descriptions-item>
+                            <el-descriptions-item label="程序版本">NexusLink v0.2.2.beta</el-descriptions-item>
+                            <el-descriptions-item label="活跃隧道">{{ stats.active_tunnel_count || 0 }}</el-descriptions-item>
+                            <el-descriptions-item label="用户注册">开放</el-descriptions-item>
+                        </el-descriptions>
+                    </div>
+                </div>
+
+                <!-- 节点管理 -->
+                <div v-if="currentPage == 'nodes'">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">节点列表</div>
+                            <el-button type="primary" @click="showNodeForm = true; nodeForm = {}">添加节点</el-button>
+                        </div>
+                        <el-table :data="nodes" style="width: 100%" v-loading="loadingNodes">
+                            <el-table-column prop="id" label="ID" width="60" />
+                            <el-table-column prop="name" label="节点名称" width="150" />
+                            <el-table-column prop="host" label="地址" width="180" />
+                            <el-table-column prop="port" label="端口" width="80" />
+                            <el-table-column prop="location" label="位置" width="120" />
+                            <el-table-column prop="tunnel_count" label="隧道数" width="80" />
+                            <el-table-column prop="status" label="状态" width="80">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.status == 1 ? 'success' : 'info'" size="small">
+                                        {{ scope.row.status == 1 ? '在线' : '离线' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="180" fixed="right">
+                                <template #default="scope">
+                                    <el-button size="small" @click="editNode(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deleteNode(scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+
+                <!-- 用户管理 -->
+                <div v-if="currentPage == 'users'">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">用户列表</div>
+                        </div>
+                        <el-table :data="users" style="width: 100%" v-loading="loadingUsers">
+                            <el-table-column prop="id" label="ID" width="60" />
+                            <el-table-column prop="username" label="用户名" width="120" />
+                            <el-table-column prop="nickname" label="昵称" width="120" />
+                            <el-table-column prop="email" label="邮箱" width="180" />
+                            <el-table-column prop="role" label="角色" width="80">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.role == 'admin' ? 'danger' : ''" size="small">
+                                        {{ scope.row.role == 'admin' ? '管理员' : '用户' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="tunnel_count" label="隧道" width="60" />
+                            <el-table-column prop="traffic_text" label="流量" width="100" />
+                            <el-table-column prop="status" label="状态" width="80">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.status == 1 ? 'success' : 'danger'" size="small">
+                                        {{ scope.row.status == 1 ? '正常' : '禁用' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="created_at" label="注册时间" width="160" />
+                            <el-table-column label="操作" width="150" fixed="right">
+                                <template #default="scope">
+                                    <el-button size="small" @click="editUser(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="deleteUser(scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+
+                <!-- 隧道管理 -->
+                <div v-if="currentPage == 'tunnels'">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">隧道列表</div>
+                        </div>
+                        <el-table :data="allTunnels" style="width: 100%" v-loading="loadingAllTunnels">
+                            <el-table-column prop="id" label="ID" width="60" />
+                            <el-table-column prop="user_id" label="用户ID" width="80" />
+                            <el-table-column prop="name" label="隧道名称" width="150" />
+                            <el-table-column label="节点" width="120">
+                                <template #default="scope">
+                                    {{ scope.row.node ? scope.row.node.name : '-' }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="type" label="类型" width="60" />
+                            <el-table-column label="本地" width="160">
+                                <template #default="scope">
+                                    {{ scope.row.local_addr }}:{{ scope.row.local_port }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="remote_port" label="远程端口" width="100" />
+                            <el-table-column prop="traffic_text" label="流量" width="100" />
+                            <el-table-column prop="status" label="状态" width="80">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.status == 1 ? 'success' : 'info'" size="small">
+                                        {{ scope.row.status == 1 ? '启用' : '禁用' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="created_at" label="创建时间" width="160" />
+                        </el-table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 节点表单弹窗 -->
+    <el-dialog v-model="showNodeForm" :title="nodeForm.id ? '编辑节点' : '添加节点'" width="500px">
+        <el-form :model="nodeForm" label-width="100px">
+            <el-form-item label="节点名称">
+                <el-input v-model="nodeForm.name" placeholder="如：北京-电信-1号" />
+            </el-form-item>
+            <el-form-item label="节点地址">
+                <el-input v-model="nodeForm.host" placeholder="如：node1.example.com" />
+            </el-form-item>
+            <el-form-item label="服务端口">
+                <el-input v-model.number="nodeForm.port" placeholder="默认7000" />
+            </el-form-item>
+            <el-form-item label="Token">
+                <el-input v-model="nodeForm.token" placeholder="节点认证Token" />
+            </el-form-item>
+            <el-form-item label="机房位置">
+                <el-input v-model="nodeForm.location" placeholder="如：北京电信" />
+            </el-form-item>
+            <el-form-item label="描述">
+                <el-input v-model="nodeForm.description" type="textarea" :rows="2" />
+            </el-form-item>
+            <el-form-item label="端口范围">
+                <el-input v-model.number="nodeForm.min_port" placeholder="最小" style="width: 45%;" />
+                <span style="margin: 0 10px;">-</span>
+                <el-input v-model.number="nodeForm.max_port" placeholder="最大" style="width: 45%;" />
+            </el-form-item>
+            <el-form-item label="状态">
+                <el-radio-group v-model="nodeForm.status">
+                    <el-radio :value="1">在线</el-radio>
+                    <el-radio :value="0">离线</el-radio>
+                </el-radio-group>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="showNodeForm = false">取消</el-button>
+            <el-button type="primary" @click="saveNode">保存</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- 用户编辑弹窗 -->
+    <el-dialog v-model="showUserForm" title="编辑用户" width="500px">
+        <el-form :model="userForm" label-width="100px">
+            <el-form-item label="用户名">
+                <el-input v-model="userForm.username" disabled />
+            </el-form-item>
+            <el-form-item label="昵称">
+                <el-input v-model="userForm.nickname" />
+            </el-form-item>
+            <el-form-item label="邮箱">
+                <el-input v-model="userForm.email" />
+            </el-form-item>
+            <el-form-item label="角色">
+                <el-radio-group v-model="userForm.role">
+                    <el-radio value="user">普通用户</el-radio>
+                    <el-radio value="admin">管理员</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="状态">
+                <el-radio-group v-model="userForm.status">
+                    <el-radio :value="1">正常</el-radio>
+                    <el-radio :value="0">禁用</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="流量限制">
+                <el-input v-model.number="userForm.traffic_limit" placeholder="0为不限" />
+                <div style="color: #909399; font-size: 12px;">字节数，0为不限制</div>
+            </el-form-item>
+            <el-form-item label="重置密码">
+                <el-input v-model="userForm.password" placeholder="留空不修改" show-password />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="showUserForm = false">取消</el-button>
+            <el-button type="primary" @click="saveUser">保存</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script src="assets/vue.global.prod.js"></script>
+<script src="assets/element-plus.full.min.js"></script>
+<script>
+        // 兼容不同版本的全局变量名
+        window.ElementPlus = window.ElementPlus || window.ELEMENT;
+const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
+
+const API_BASE = 'api';
+
+const app = createApp({
+    setup() {
+        const isLoggedIn = ref(false);
+        const token = ref(localStorage.getItem('nexuslink_admin_token') || '');
+        const currentPage = ref('dashboard');
+
+        const loginForm = reactive({ username: '', password: '' });
+        const loggingIn = ref(false);
+
+        // 统计
+        const stats = reactive({});
+
+        // 节点
+        const nodes = ref([]);
+        const loadingNodes = ref(false);
+        const showNodeForm = ref(false);
+        const nodeForm = reactive({});
+
+        // 用户
+        const users = ref([]);
+        const loadingUsers = ref(false);
+        const showUserForm = ref(false);
+        const userForm = reactive({});
+
+        // 所有隧道
+        const allTunnels = ref([]);
+        const loadingAllTunnels = ref(false);
+
+        const pageTitle = computed(() => {
+            const titles = {
+                dashboard: '仪表盘',
+                nodes: '节点管理',
+                users: '用户管理',
+                tunnels: '隧道管理',
+            };
+            return titles[currentPage.value] || '';
+        });
+
+        // API请求
+        async function api(url, options = {}) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token.value) {
+                headers['Authorization'] = 'Bearer ' + token.value;
+            }
+            const res = await fetch(API_BASE + '/' + url, {
+                ...options,
+                headers,
+            });
+            return res.json();
+        }
+
+        // 登录
+        async function doLogin() {
+            if (!loginForm.username || !loginForm.password) {
+                ElementPlus.ElMessage.warning('请输入用户名和密码');
+                return;
+            }
+            loggingIn.value = true;
+            const res = await api('auth.php?action=login', {
+                method: 'POST',
+                body: JSON.stringify(loginForm),
+            });
+            loggingIn.value = false;
+
+            if (res.success) {
+                if (res.user.role !== 'admin') {
+                    ElementPlus.ElMessage.error('需要管理员权限');
+                    return;
+                }
+                token.value = res.token;
+                localStorage.setItem('nexuslink_admin_token', res.token);
+                isLoggedIn.value = true;
+                loadStats();
+                ElementPlus.ElMessage.success('登录成功');
+            } else {
+                ElementPlus.ElMessage.error(res.error || '登录失败');
+            }
+        }
+
+        // 退出
+        function logout() {
+            token.value = '';
+            localStorage.removeItem('nexuslink_admin_token');
+            isLoggedIn.value = false;
+        }
+
+        // 加载统计
+        async function loadStats() {
+            const res = await api('admin.php?action=stats');
+            if (res.success) {
+                Object.assign(stats, res.stats);
+            } else if (res.error && res.error.includes('管理员')) {
+                logout();
+                ElementPlus.ElMessage.error('需要管理员权限');
+            }
+        }
+
+        // 加载节点
+        async function loadNodes() {
+            loadingNodes.value = true;
+            const res = await api('admin.php?action=node_list');
+            if (res.success) {
+                nodes.value = res.nodes || [];
+            }
+            loadingNodes.value = false;
+        }
+
+        // 加载用户
+        async function loadUsers() {
+            loadingUsers.value = true;
+            const res = await api('admin.php?action=user_list');
+            if (res.success) {
+                users.value = res.users || [];
+            }
+            loadingUsers.value = false;
+        }
+
+        // 加载所有隧道
+        async function loadAllTunnels() {
+            loadingAllTunnels.value = true;
+            try {
+                const res = await api('admin.php?action=tunnel_list');
+                allTunnels.value = res.tunnels || [];
+            } catch (e) {
+                allTunnels.value = [];
+            }
+            loadingAllTunnels.value = false;
+        }
+
+        // 编辑节点
+        function editNode(node) {
+            Object.assign(nodeForm, node);
+            showNodeForm.value = true;
+        }
+
+        // 保存节点
+        async function saveNode() {
+            if (!nodeForm.name || !nodeForm.host || !nodeForm.token) {
+                ElementPlus.ElMessage.warning('请填写必填项');
+                return;
+            }
+
+            const action = nodeForm.id ? 'node_update' : 'node_create';
+            const res = await api(`admin.php?action=${action}`, {
+                method: 'POST',
+                body: JSON.stringify(nodeForm),
+            });
+
+            if (res.success) {
+                ElementPlus.ElMessage.success('保存成功');
+                showNodeForm.value = false;
+                loadNodes();
+                loadStats();
+            } else {
+                ElementPlus.ElMessage.error(res.error || '保存失败');
+            }
+        }
+
+        // 删除节点
+        function deleteNode(node) {
+            ElementPlus.ElMessageBox.confirm(`确定删除节点「${node.name}」吗？`, '确认', {
+                type: 'warning',
+            }).then(async () => {
+                const res = await api('admin.php?action=node_delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: node.id }),
+                });
+                if (res.success) {
+                    ElementPlus.ElMessage.success('删除成功');
+                    loadNodes();
+                    loadStats();
+                } else {
+                    ElementPlus.ElMessage.error(res.error || '删除失败');
+                }
+            }).catch(() => {});
+        }
+
+        // 编辑用户
+        function editUser(user) {
+            Object.assign(userForm, user);
+            userForm.password = '';
+            showUserForm.value = true;
+        }
+
+        // 保存用户
+        async function saveUser() {
+            const res = await api('admin.php?action=user_update', {
+                method: 'POST',
+                body: JSON.stringify(userForm),
+            });
+
+            if (res.success) {
+                ElementPlus.ElMessage.success('保存成功');
+                showUserForm.value = false;
+                loadUsers();
+                loadStats();
+            } else {
+                ElementPlus.ElMessage.error(res.error || '保存失败');
+            }
+        }
+
+        // 删除用户
+        function deleteUser(user) {
+            ElementPlus.ElMessageBox.confirm(`确定删除用户「${user.username}」吗？该用户的所有隧道也会被删除。`, '确认', {
+                type: 'warning',
+            }).then(async () => {
+                const res = await api('admin.php?action=user_delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: user.id }),
+                });
+                if (res.success) {
+                    ElementPlus.ElMessage.success('删除成功');
+                    loadUsers();
+                    loadStats();
+                } else {
+                    ElementPlus.ElMessage.error(res.error || '删除失败');
+                }
+            }).catch(() => {});
+        }
+
+        // 监听页面切换
+        watch(currentPage, (page) => {
+            if (page == 'nodes') loadNodes();
+            if (page == 'users') loadUsers();
+            if (page == 'tunnels') loadAllTunnels();
+        });
+
+        onMounted(() => {
+            if (token.value) {
+                // 验证token
+                api('admin.php?action=stats').then(res => {
+                    if (res.success) {
+                        isLoggedIn.value = true;
+                        loadStats();
+                    } else {
+                        token.value = '';
+                        localStorage.removeItem('nexuslink_admin_token');
+                    }
+                });
+            }
+        });
+
+        return {
+            isLoggedIn, token, currentPage, pageTitle,
+            loginForm, loggingIn,
+            stats,
+            nodes, loadingNodes, showNodeForm, nodeForm,
+            users, loadingUsers, showUserForm, userForm,
+            allTunnels, loadingAllTunnels,
+            doLogin, logout,
+            editNode, saveNode, deleteNode,
+            editUser, saveUser, deleteUser,
+        };
+    }
+});
+
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>
