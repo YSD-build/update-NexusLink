@@ -368,6 +368,22 @@ class Updater {
             'sql/'
         ];
         
+        // 需要保留的文件（更新时不覆盖）
+        $preserveFiles = [
+            'api/config.php'
+        ];
+        
+        // 先备份需要保留的文件
+        $tempPreserve = [];
+        foreach ($preserveFiles as $file) {
+            $filePath = $rootDir . '/' . $file;
+            if (file_exists($filePath)) {
+                $tempFile = sys_get_temp_dir() . '/nexuslink_preserve_' . basename($file) . '_' . time();
+                copy($filePath, $tempFile);
+                $tempPreserve[$file] = $tempFile;
+            }
+        }
+        
         foreach ($items as $item) {
             $source = $platformDir . '/' . $item;
             $dest = $rootDir . '/' . $item;
@@ -385,6 +401,17 @@ class Updater {
                 }
                 copy($source, $dest);
             }
+        }
+        
+        // 恢复需要保留的文件
+        foreach ($tempPreserve as $file => $tempFile) {
+            $destPath = $rootDir . '/' . $file;
+            $destDir = dirname($destPath);
+            if (!is_dir($destDir)) {
+                mkdir($destDir, 0755, true);
+            }
+            copy($tempFile, $destPath);
+            unlink($tempFile);
         }
         
         // 清理临时文件
