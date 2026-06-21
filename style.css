@@ -2337,3 +2337,109 @@ a:hover {
         align-self: flex-end;
     }
 }
+
+/* ========== 修复补丁 - 解决卡片宽度和布局问题 ========== */
+
+/* 确保主内容区正确占满剩余空间 */
+.main-content {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保卡片宽度正常 */
+.card {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+/* 确保隧道网格布局正常 */
+.tunnel-grid {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.tunnel-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保节点网格布局正常 */
+.node-grid {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.node-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保统计卡片网格布局正常 */
+.stats-grid {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保欢迎区域宽度正常 */
+.welcome-section {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保表单元素宽度正常 */
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保操作栏宽度正常 */
+.action-bar {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保信息卡片宽度正常 */
+.info-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保筛选栏宽度正常 */
+.filter-bar {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保步骤指示器宽度正常 */
+.steps {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保已选节点卡片宽度正常 */
+.selected-node-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保表单分组宽度正常 */
+.form-section {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保单选按钮组宽度正常 */
+.radio-group {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 确保配置代码块宽度正常 */
+.config-block {
+    width: 100%;
+    box-sizing: border-box;
+}
