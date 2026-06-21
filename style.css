@@ -2037,3 +2037,303 @@ a:hover {
         flex-direction: column;
     }
 }
+
+/* ==================== 创建隧道分步式样式 ==================== */
+
+/* 信息提示卡片 */
+.info-card {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: var(--primary-light);
+    border: 1px solid rgba(32, 128, 240, 0.2);
+    border-radius: var(--radius-large);
+    margin-bottom: 20px;
+}
+
+.info-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+}
+
+.info-content {
+    flex: 1;
+}
+
+.info-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.info-desc {
+    font-size: 13px;
+    color: var(--text-regular);
+    line-height: 1.6;
+}
+
+/* 筛选栏 */
+.filter-bar {
+    margin-bottom: 20px;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 6px 16px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    font-size: 13px;
+    color: var(--text-regular);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-tab:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.filter-tab.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* 节点卡片网格 */
+.node-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.node-card {
+    display: block;
+    padding: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-large);
+    box-shadow: var(--glass-shadow);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.node-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.node-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.12);
+    border-color: var(--primary-color);
+}
+
+.node-card:hover::before {
+    opacity: 1;
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.node-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.node-status-tag {
+    padding: 2px 8px;
+    border-radius: var(--radius-small);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.node-status-tag.online {
+    background: var(--success-light);
+    color: var(--success-color);
+}
+
+.node-status-tag.offline {
+    background: var(--error-light);
+    color: var(--error-color);
+}
+
+.node-location {
+    font-size: 13px;
+    color: var(--text-regular);
+    margin-bottom: 8px;
+}
+
+.node-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+    min-height: 36px;
+}
+
+.node-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+}
+
+.node-port {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+}
+
+/* 步骤指示器 */
+.steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    padding: 16px 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--info-light);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    transition: all 0.3s;
+}
+
+.step.active .step-number {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.step.done .step-number {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+.step-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.step.active .step-text {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.step.done .step-text {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.step-line {
+    width: 60px;
+    height: 2px;
+    background: var(--border-color);
+    margin: 0 12px;
+    margin-bottom: 22px;
+}
+
+/* 已选节点卡片 */
+.selected-node-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--primary-light);
+    border: 1px solid rgba(32, 128, 240, 0.2);
+    border-radius: var(--radius-large);
+    margin-bottom: 20px;
+}
+
+.selected-node-info {
+    flex: 1;
+}
+
+.selected-node-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.selected-node-location {
+    font-size: 13px;
+    color: var(--text-regular);
+}
+
+/* 响应式：移动端节点卡片 */
+@media (max-width: 768px) {
+    .node-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .steps {
+        padding: 12px 0;
+    }
+    
+    .step-line {
+        width: 40px;
+        margin: 0 8px;
+        margin-bottom: 22px;
+    }
+    
+    .selected-node-card {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .selected-node-card .btn {
+        align-self: flex-end;
+    }
+}

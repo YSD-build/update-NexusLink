@@ -936,99 +936,178 @@ function get_checkin_info($user_id) {
                 </div>
 
             <?php elseif ($action == 'create_tunnel'): ?>
-                <!-- 创建隧道 -->
-                <div class="card" style="max-width:650px;">
-                    <div class="card-title">创建隧道</div>
-                    
-                    <div class="card-desc">
-                        填写以下信息创建一条新的内网穿透隧道，创建后可随时修改配置
+                <?php
+                $selected_node_id = isset($_GET['node_id']) ? intval($_GET['node_id']) : (isset($_POST['node_id']) ? intval($_POST['node_id']) : 0);
+                $nodes = get_nodes();
+                ?>
+                
+                <?php if (!$selected_node_id): ?>
+                    <!-- 第一步：选择节点 -->
+                    <div class="card">
+                        <div class="card-title">创建隧道</div>
+                        
+                        <!-- 引导提示 -->
+                        <div class="info-card">
+                            <div class="info-icon">i</div>
+                            <div class="info-content">
+                                <div class="info-title">如何选择节点？</div>
+                                <div class="info-desc">选择离你最近的节点以获得最佳速度。不同节点支持的端口范围和线路类型可能不同，请根据实际需求选择。</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 筛选标签 -->
+                        <div class="filter-bar">
+                            <div class="filter-tabs">
+                                <span class="filter-tab active">全部节点</span>
+                                <span class="filter-tab">在线</span>
+                                <span class="filter-tab">离线</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 节点卡片网格 -->
+                        <div class="node-grid">
+                            <?php
+                            foreach ($nodes as $node) {
+                                $status_class = $node['status'] == 1 ? 'online' : 'offline';
+                                $status_text = $node['status'] == 1 ? '在线' : '离线';
+                                $desc = !empty($node['description']) ? $node['description'] : '高速稳定节点';
+                                ?>
+                                <a href="index.php?action=create_tunnel&node_id=<?php echo $node['id']; ?>" class="node-card">
+                                    <div class="node-header">
+                                        <span class="node-name">#<?php echo $node['id']; ?> <?php echo htmlspecialchars($node['name']); ?></span>
+                                        <span class="node-status-tag <?php echo $status_class; ?>"><?php echo $status_text; ?></span>
+                                    </div>
+                                    <div class="node-location"><?php echo htmlspecialchars($node['location']); ?></div>
+                                    <div class="node-desc"><?php echo htmlspecialchars($desc); ?></div>
+                                    <div class="node-footer">
+                                        <span class="node-port">端口: <?php echo $node['min_port']; ?> - <?php echo $node['max_port']; ?></span>
+                                    </div>
+                                </a>
+                                <?php
+                            }
+                            ?>
+                        </div>
                     </div>
                     
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-                    <?php endif; ?>
+                <?php else: ?>
+                    <!-- 第二步：填写隧道信息 -->
+                    <?php
+                    $selected_node = null;
+                    foreach ($nodes as $node) {
+                        if ($node['id'] == $selected_node_id) {
+                            $selected_node = $node;
+                            break;
+                        }
+                    }
+                    ?>
                     
-                    <?php if (isset($success)): ?>
-                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-                    <?php endif; ?>
-                    
-                    <form method="post" action="">
-                        <input type="hidden" name="action" value="create_tunnel">
-                        
-                        <div class="form-section">
-                            <div class="form-section-title">基本信息</div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">隧道名称 <span class="required">*</span></label>
-                                <input type="text" name="name" class="form-input" placeholder="给你的隧道起个名字，如：我的世界服务器" value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
-                                <div class="form-hint">便于识别和管理你的隧道</div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">选择节点 <span class="required">*</span></label>
-                                <select name="node_id" class="form-input">
-                                    <option value="">请选择节点</option>
-                                    <?php
-                                    $nodes = get_nodes();
-                                    $default_node_id = $_GET['node_id'] ?? ($_POST['node_id'] ?? '');
-                                    foreach ($nodes as $node) {
-                                        $selected = ($default_node_id == $node['id']) ? 'selected' : '';
-                                        $status_text = $node['status'] == 1 ? '在线' : '离线';
-                                        $status_class = $node['status'] == 1 ? 'text-success' : 'text-error';
-                                        echo '<option value="' . $node['id'] . '" ' . $selected . '>' . htmlspecialchars($node['name']) . ' - ' . htmlspecialchars($node['location']) . ' (' . $status_text . ')</option>';
-                                    }
-                                    ?>
-                                </select>
-                                <div class="form-hint">选择离你最近的节点以获得最佳速度</div>
+                    <?php if (!$selected_node): ?>
+                        <div class="card" style="max-width:650px;">
+                            <div class="alert alert-danger">节点不存在</div>
+                            <div class="form-actions">
+                                <a href="index.php?action=create_tunnel" class="btn btn-large btn-primary">返回选择节点</a>
                             </div>
                         </div>
-                        
-                        <div class="form-section">
-                            <div class="form-section-title">隧道配置</div>
+                    <?php else: ?>
+                        <div class="card" style="max-width:650px;">
+                            <div class="card-title">创建隧道</div>
                             
-                            <div class="form-group">
-                                <label class="form-label">隧道类型 <span class="required">*</span></label>
-                                <div class="radio-group">
-                                    <label class="radio-item">
-                                        <input type="radio" name="type" value="tcp" <?php echo (!isset($_POST['type']) || $_POST['type'] == 'tcp') ? 'checked' : ''; ?>>
-                                        <span class="radio-label">TCP</span>
-                                        <span class="radio-desc">适用于网站、SSH、数据库等大多数场景</span>
-                                    </label>
-                                    <label class="radio-item">
-                                        <input type="radio" name="type" value="udp" <?php echo (isset($_POST['type']) && $_POST['type'] == 'udp') ? 'checked' : ''; ?>>
-                                        <span class="radio-label">UDP</span>
-                                        <span class="radio-desc">适用于游戏、DNS、语音通话等实时场景</span>
-                                    </label>
+                            <!-- 步骤指示器 -->
+                            <div class="steps">
+                                <div class="step done">
+                                    <span class="step-number">1</span>
+                                    <span class="step-text">选择节点</span>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step active">
+                                    <span class="step-number">2</span>
+                                    <span class="step-text">填写信息</span>
                                 </div>
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">本地地址 <span class="required">*</span></label>
-                                    <input type="text" name="local_addr" class="form-input" placeholder="127.0.0.1" value="<?php echo htmlspecialchars($_POST['local_addr'] ?? '127.0.0.1'); ?>">
-                                    <div class="form-hint">本地服务的IP地址</div>
+                            <!-- 已选节点信息 -->
+                            <div class="selected-node-card">
+                                <div class="selected-node-info">
+                                    <div class="selected-node-name"><?php echo htmlspecialchars($selected_node['name']); ?></div>
+                                    <div class="selected-node-location"><?php echo htmlspecialchars($selected_node['location']); ?> · 端口范围 <?php echo $selected_node['min_port']; ?> - <?php echo $selected_node['max_port']; ?></div>
+                                </div>
+                                <a href="index.php?action=create_tunnel" class="btn btn-small">重新选择</a>
+                            </div>
+                            
+                            <div class="card-desc">
+                                填写隧道的配置信息，创建后节点和类型不可修改
+                            </div>
+                            
+                            <?php if (isset($error)): ?>
+                                <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                            <?php endif; ?>
+                            
+                            <?php if (isset($success)): ?>
+                                <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                            <?php endif; ?>
+                            
+                            <form method="post" action="">
+                                <input type="hidden" name="action" value="create_tunnel">
+                                <input type="hidden" name="node_id" value="<?php echo $selected_node_id; ?>">
+                                
+                                <div class="form-section">
+                                    <div class="form-section-title">基本信息</div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">隧道名称 <span class="required">*</span></label>
+                                        <input type="text" name="name" class="form-input" placeholder="给你的隧道起个名字，如：我的世界服务器" value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
+                                        <div class="form-hint">便于识别和管理你的隧道</div>
+                                    </div>
                                 </div>
                                 
-                                <div class="form-group">
-                                    <label class="form-label">本地端口 <span class="required">*</span></label>
-                                    <input type="number" name="local_port" class="form-input" placeholder="如：8080" value="<?php echo htmlspecialchars($_POST['local_port'] ?? ''); ?>">
-                                    <div class="form-hint">本地服务监听的端口</div>
+                                <div class="form-section">
+                                    <div class="form-section-title">隧道配置</div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">隧道类型 <span class="required">*</span></label>
+                                        <div class="radio-group">
+                                            <label class="radio-item">
+                                                <input type="radio" name="type" value="tcp" <?php echo (!isset($_POST['type']) || $_POST['type'] == 'tcp') ? 'checked' : ''; ?>>
+                                                <span class="radio-label">TCP</span>
+                                                <span class="radio-desc">适用于网站、SSH、数据库等大多数场景</span>
+                                            </label>
+                                            <label class="radio-item">
+                                                <input type="radio" name="type" value="udp" <?php echo (isset($_POST['type']) && $_POST['type'] == 'udp') ? 'checked' : ''; ?>>
+                                                <span class="radio-label">UDP</span>
+                                                <span class="radio-desc">适用于游戏、DNS、语音通话等实时场景</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">本地地址 <span class="required">*</span></label>
+                                            <input type="text" name="local_addr" class="form-input" placeholder="127.0.0.1" value="<?php echo htmlspecialchars($_POST['local_addr'] ?? '127.0.0.1'); ?>">
+                                            <div class="form-hint">本地服务的IP地址</div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">本地端口 <span class="required">*</span></label>
+                                            <input type="number" name="local_port" class="form-input" placeholder="如：8080" value="<?php echo htmlspecialchars($_POST['local_port'] ?? ''); ?>">
+                                            <div class="form-hint">本地服务监听的端口</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">远程端口 <span class="required">*</span></label>
+                                        <input type="number" name="remote_port" class="form-input" placeholder="10000 - 60000" value="<?php echo htmlspecialchars($_POST['remote_port'] ?? ''); ?>">
+                                        <div class="form-hint">外网访问时使用的端口，范围：<?php echo $selected_node['min_port']; ?> - <?php echo $selected_node['max_port']; ?></div>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">远程端口 <span class="required">*</span></label>
-                                <input type="number" name="remote_port" class="form-input" placeholder="10000 - 60000" value="<?php echo htmlspecialchars($_POST['remote_port'] ?? ''); ?>">
-                                <div class="form-hint">外网访问时使用的端口，范围：10000 - 60000</div>
-                            </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary btn-large">创建隧道</button>
+                                    <a href="index.php?action=create_tunnel" class="btn btn-large">上一步</a>
+                                </div>
+                            </form>
                         </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary btn-large">创建隧道</button>
-                            <a href="index.php?action=tunnels" class="btn btn-large">取消</a>
-                        </div>
-                    </form>
-                </div>
+                    <?php endif; ?>
+                <?php endif; ?>
                 
             <?php elseif ($action == 'edit_tunnel'): ?>
                 <!-- 编辑隧道 -->
