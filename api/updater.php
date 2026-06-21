@@ -228,6 +228,9 @@ class Updater {
         // 4. 清理临时文件
         @unlink($downloadResult['file']);
         
+        // 5. 更新 config.php 中的版本号
+        $this->updateConfigVersion($updateInfo['latest_version']);
+        
         return [
             'success' => true,
             'message' => '更新成功！',
@@ -528,6 +531,45 @@ class Updater {
         }
         
         rmdir($dir);
+    }
+    
+    /**
+     * 更新 config.php 中的版本号
+     */
+    private function updateConfigVersion($newVersion) {
+        $configFile = dirname(__DIR__) . '/api/config.php';
+        
+        if (!file_exists($configFile)) {
+            return false;
+        }
+        
+        $content = file_get_contents($configFile);
+        
+        // 替换 CURRENT_VERSION
+        $content = preg_replace(
+            "/define\('CURRENT_VERSION',\s*'[^']+'\);/",
+            "define('CURRENT_VERSION', '" . $newVersion . "');",
+            $content
+        );
+        
+        // 替换 VERSION_CODE
+        $versionCode = date('Ymd') . '01';
+        $content = preg_replace(
+            "/define\('VERSION_CODE',\s*\d+\);/",
+            "define('VERSION_CODE', " . $versionCode . ");",
+            $content
+        );
+        
+        // 替换 VERSION_DATE
+        $versionDate = date('Y-m-d');
+        $content = preg_replace(
+            "/define\('VERSION_DATE',\s*'[^']+'\);/",
+            "define('VERSION_DATE', '" . $versionDate . "');",
+            $content
+        );
+        
+        // 写回文件
+        return @file_put_contents($configFile, $content) !== false;
     }
     
     /**
