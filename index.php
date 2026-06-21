@@ -1133,28 +1133,6 @@ function get_checkin_info($user_id) {
                     </form>
                     <?php endif; ?>
                 </div>
-                        <div class="form-group">
-                            <label class="form-label">本地端口 *</label>
-                            <input type="number" name="local_port" class="form-input" placeholder="例如：8080" value="<?php echo htmlspecialchars($_POST['local_port'] ?? $edit_tunnel['local_port']); ?>">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">远程端口 *</label>
-                            <input type="number" name="remote_port" class="form-input" placeholder="10000-60000" value="<?php echo htmlspecialchars($_POST['remote_port'] ?? $edit_tunnel['remote_port']); ?>">
-                        </div>
-                        
-                        <div class="alert alert-info" style="margin-bottom:20px;">
-                            远程端口范围：10000 - 60000，请选择一个未被占用的端口
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary btn-large btn-block">保存修改</button>
-                    </form>
-                    
-                    <div style="margin-top:20px;">
-                        <a href="index.php?action=tunnels" class="btn">← 返回隧道列表</a>
-                    </div>
-                    <?php endif; ?>
-                </div>
                 
             <?php elseif ($action == 'tunnel_config'): ?>
                 <!-- 隧道配置 -->
