@@ -750,7 +750,7 @@ function get_checkin_info($user_id) {
                 <!-- 节点列表 -->
                 <div class="card" id="nodes">
                     <div class="card-title">
-                        <span style="font-size:18px;">🖥️ 节点列表</span>
+                        <span style="font-size:18px;">节点列表</span>
                     </div>
                     <div class="node-grid">
                         <?php
@@ -760,7 +760,7 @@ function get_checkin_info($user_id) {
                         ?>
                         <div class="node-card">
                             <div class="node-name"><?php echo htmlspecialchars($node['name']); ?></div>
-                            <div class="node-location">📍 <?php echo htmlspecialchars($node['location']); ?></div>
+                            <div class="node-location"><?php echo htmlspecialchars($node['location']); ?></div>
                             <div class="node-info">
                                 <div>地址: <?php echo htmlspecialchars($node['host']); ?>:<?php echo htmlspecialchars($node['port']); ?></div>
                                 <div>端口范围: <?php echo htmlspecialchars($node['min_port']); ?> - <?php echo htmlspecialchars($node['max_port']); ?></div>
@@ -898,13 +898,13 @@ function get_checkin_info($user_id) {
                     <div class="checkin-card-content">
                         <div>
                             <div style="font-size:18px; font-weight:600; margin-bottom:8px;">
-                                📅 每日签到领流量
+                                每日签到领流量
                             </div>
                             <div style="opacity:0.9; font-size:14px;">
                                 <?php if ($checkin_info['today_checked']): ?>
-                                    ✅ 今日已签到 · 连续 <?php echo $checkin_info['continuous_days']; ?> 天
+                                    今日已签到 · 连续 <?php echo $checkin_info['continuous_days']; ?> 天
                                 <?php else: ?>
-                                    👋 今日还未签到 · 基础奖励 10 GB
+                                    今日还未签到 · 基础奖励 10 GB
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1192,7 +1192,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     function copyConfig() {
                         const configText = document.getElementById('configContent').innerText;
                         navigator.clipboard.writeText(configText).then(() => {
-                            alert('配置已复制到剪贴板');
+                            showToast('配置已复制到剪贴板', 'success');
                         }).catch(() => {
                             // 降级方案
                             const textarea = document.createElement('textarea');
@@ -1201,14 +1201,14 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                             textarea.select();
                             document.execCommand('copy');
                             document.body.removeChild(textarea);
-                            alert('配置已复制到剪贴板');
+                            showToast('配置已复制到剪贴板', 'success');
                         });
                     }
                     
                     function copyAccessAddr() {
                         const addr = document.getElementById('accessAddr').value;
                         navigator.clipboard.writeText(addr).then(() => {
-                            alert('访问地址已复制');
+                            showToast('访问地址已复制', 'success');
                         }).catch(() => {
                             const textarea = document.createElement('textarea');
                             textarea.value = addr;
@@ -1216,7 +1216,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                             textarea.select();
                             document.execCommand('copy');
                             document.body.removeChild(textarea);
-                            alert('访问地址已复制');
+                            showToast('访问地址已复制', 'success');
                         });
                     }
                     </script>
@@ -1322,7 +1322,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     ?>
                     <div class="node-card">
                         <div class="node-name"><?php echo htmlspecialchars($node['name']); ?></div>
-                        <div class="node-location">📍 <?php echo htmlspecialchars($node['location']); ?></div>
+                        <div class="node-location"><?php echo htmlspecialchars($node['location']); ?></div>
                         <div class="node-info">
                             <div>地址: <?php echo htmlspecialchars($node['host']); ?>:<?php echo htmlspecialchars($node['port']); ?></div>
                             <div>端口范围: <?php echo htmlspecialchars($node['min_port']); ?> - <?php echo htmlspecialchars($node['max_port']); ?></div>
@@ -1347,70 +1347,102 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
             <?php elseif ($action == 'checkin'): ?>
                 <!-- 每日签到 -->
-                <div class="card" style="max-width:700px;">
-                    <div class="card-title">🎁 每日签到</div>
-                    
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-                    <?php endif; ?>
-                    
-                    <?php if (isset($success)): ?>
-                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-                    <?php endif; ?>
-                    
-                    <?php
-                    $checkin_info = get_checkin_info($current_user['id']);
-                    ?>
-                    
-                    <!-- 签到状态卡片 -->
-                    <div class="checkin-status-card">
-                        <div style="font-size: 48px; margin-bottom: 10px;"><?php echo $checkin_info['today_checked'] ? '✅' : '🎁'; ?></div>
-                        <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">
-                            <?php echo $checkin_info['today_checked'] ? '今日已签到' : '今日未签到'; ?>
-                        </div>
-                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
-                            连续签到 <strong><?php echo $checkin_info['continuous_days']; ?></strong> 天 · 累计获得 <strong><?php echo format_traffic($checkin_info['total_traffic']); ?></strong> 流量
+                <div class="checkin-page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span class="card-title-icon icon-checkin"></span>
+                            每日签到
                         </div>
                         
-                        <?php if (!$checkin_info['today_checked']): ?>
-                        <form method="post" action="">
-                            <input type="hidden" name="action" value="checkin">
-                            <button type="submit" class="btn btn-large btn-glass">
-                                立即签到领流量
-                            </button>
-                        </form>
-                        <?php else: ?>
-                        <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 20px; display: inline-block;">
-                            今日已获得 <?php echo format_traffic($checkin_info['today_reward']); ?> 流量
-                        </div>
+                        <?php if (isset($error)): ?>
+                            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
                         <?php endif; ?>
-                    </div>
-                    
-                    <!-- 最近7天签到记录 -->
-                    <div class="card">
-                        <div class="card-title" style="font-size: 16px; padding-bottom: 15px;">最近7天签到记录</div>
-                        <div style="display: flex; justify-content: space-between; gap: 10px;">
-                            <?php foreach ($checkin_info['records'] as $record): ?>
-                            <div style="flex: 1; text-align: center;">
-                                <div style="width: 50px; height: 50px; line-height: 50px; border-radius: 50%; margin: 0 auto 8px; background: <?php echo $record['checked'] ? '#67c23a' : '#f5f7fa'; ?>; color: <?php echo $record['checked'] ? 'white' : '#909399'; ?>; font-size: 20px;">
-                                    <?php echo $record['checked'] ? '✓' : '○'; ?>
-                                </div>
-                                <div style="font-size: 12px; color: #909399;"><?php echo $record['day']; ?></div>
+                        
+                        <?php if (isset($success)): ?>
+                            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                        <?php endif; ?>
+                        
+                        <?php
+                        $checkin_info = get_checkin_info($current_user['id']);
+                        ?>
+                        
+                        <!-- 签到状态卡片 -->
+                        <div class="checkin-status-card">
+                            <div class="checkin-status-icon">
+                                <?php if ($checkin_info['today_checked']): ?>
+                                    <span style="color:white;">✓</span>
+                                <?php else: ?>
+                                    <span style="color:white;">🎁</span>
+                                <?php endif; ?>
                             </div>
-                            <?php endforeach; ?>
+                            <div class="checkin-status-title">
+                                <?php echo $checkin_info['today_checked'] ? '今日已签到' : '今日未签到'; ?>
+                            </div>
+                            <div class="checkin-status-desc">
+                                连续签到 <strong><?php echo $checkin_info['continuous_days']; ?></strong> 天 · 累计获得 <strong><?php echo format_traffic($checkin_info['total_traffic']); ?></strong> 流量
+                            </div>
+                            
+                            <?php if (!$checkin_info['today_checked']): ?>
+                            <form method="post" action="">
+                                <input type="hidden" name="action" value="checkin">
+                                <button type="submit" class="checkin-btn">
+                                    立即签到领流量
+                                </button>
+                            </form>
+                            <?php else: ?>
+                            <div class="checkin-reward-tag">
+                                今日已获得 <?php echo format_traffic($checkin_info['today_reward']); ?> 流量
+                            </div>
+                            <?php endif; ?>
                         </div>
-                    </div>
-                    
-                    <!-- 签到奖励规则 -->
-                    <div class="card">
-                        <div class="card-title" style="font-size: 16px; padding-bottom: 15px;">📋 签到奖励规则</div>
-                        <div style="color: #606266; line-height: 2;">
-                            <p>✅ 每日签到：基础奖励 <strong>10GB</strong> 流量</p>
-                            <p>🔥 连续签到7天：额外奖励 <strong>5GB</strong> 流量</p>
-                            <p>🏆 连续签到30天：额外奖励 <strong>10GB</strong> 流量</p>
-                            <p style="color: #909399; font-size: 13px; margin-top: 10px;">
-                                💡 提示：连续签到天数越多，奖励越丰厚。中断签到将重新计算连续天数。
-                            </p>
+                        
+                        <!-- 最近7天签到记录 -->
+                        <div class="card checkin-records-card">
+                            <div class="card-title" style="font-size: 16px; padding-bottom: 15px;">最近7天签到记录</div>
+                            <div class="checkin-records">
+                                <?php foreach ($checkin_info['records'] as $record): ?>
+                                <div class="checkin-record-item">
+                                    <div class="checkin-record-dot <?php echo $record['checked'] ? 'checked' : 'unchecked'; ?>">
+                                        <?php echo $record['checked'] ? '✓' : ''; ?>
+                                    </div>
+                                    <div class="checkin-record-day"><?php echo $record['day']; ?></div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- 签到奖励规则 -->
+                        <div class="card">
+                            <div class="card-title" style="font-size: 16px; padding-bottom: 15px;">签到奖励规则</div>
+                            <div class="reward-rules">
+                                <div class="reward-rule-item">
+                                    <div class="reward-rule-icon">📅</div>
+                                    <div class="reward-rule-content">
+                                        <div class="reward-rule-title">每日签到</div>
+                                        <div class="reward-rule-desc">每天签到即可获得基础奖励</div>
+                                    </div>
+                                    <div class="reward-rule-amount">+10GB</div>
+                                </div>
+                                <div class="reward-rule-item">
+                                    <div class="reward-rule-icon">🔥</div>
+                                    <div class="reward-rule-content">
+                                        <div class="reward-rule-title">连续签到7天</div>
+                                        <div class="reward-rule-desc">连续签到满7天额外奖励</div>
+                                    </div>
+                                    <div class="reward-rule-amount">+5GB</div>
+                                </div>
+                                <div class="reward-rule-item">
+                                    <div class="reward-rule-icon">🏆</div>
+                                    <div class="reward-rule-content">
+                                        <div class="reward-rule-title">连续签到30天</div>
+                                        <div class="reward-rule-desc">连续签到满30天额外奖励</div>
+                                    </div>
+                                    <div class="reward-rule-amount">+10GB</div>
+                                </div>
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 13px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-light);">
+                                提示：连续签到天数越多，奖励越丰厚。中断签到将重新计算连续天数。
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1418,7 +1450,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
             <?php elseif ($action == 'change_password'): ?>
                 <!-- 修改密码 -->
                 <div class="card" style="max-width:500px;">
-                    <div class="card-title">🔐 修改密码</div>
+                    <div class="card-title">修改密码</div>
                     
                     <?php if (isset($error)): ?>
                         <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -1456,8 +1488,46 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
             <?php elseif ($action == 'profile'): ?>
                 <!-- 个人中心 -->
-                <div class="card" style="max-width:600px;">
-                    <div class="card-title">👤 个人信息</div>
+                <div class="card profile-card">
+                    <div class="card-title">
+                        <span class="card-title-icon icon-user"></span>
+                        个人信息
+                    </div>
+                    
+                    <!-- 流量概览卡片 -->
+                    <div class="traffic-overview">
+                        <div class="traffic-header">
+                            <div class="traffic-title">流量使用情况</div>
+                            <div class="traffic-percent">
+                                <?php 
+                                $traffic_percent = 0;
+                                if ($current_user['traffic_limit'] > 0) {
+                                    $traffic_percent = min(100, round($current_user['traffic'] / $current_user['traffic_limit'] * 100));
+                                }
+                                echo $current_user['traffic_limit'] ? $traffic_percent . '%' : '不限';
+                                ?>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-inner" style="width: <?php echo $current_user['traffic_limit'] ? $traffic_percent : 100; ?>%;"></div>
+                        </div>
+                        <div class="traffic-stats">
+                            <div class="traffic-stat-item">
+                                <div class="traffic-stat-label">已用流量</div>
+                                <div class="traffic-stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
+                            </div>
+                            <div class="traffic-stat-item">
+                                <div class="traffic-stat-label">剩余流量</div>
+                                <div class="traffic-stat-value text-success">
+                                    <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
+                                </div>
+                            </div>
+                            <div class="traffic-stat-item">
+                                <div class="traffic-stat-label">总流量</div>
+                                <div class="traffic-stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="desc-list">
                         <div class="desc-item">
@@ -1481,32 +1551,20 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                             </div>
                         </div>
                         <div class="desc-item">
-                            <div class="desc-label">已用流量</div>
-                            <div class="desc-value"><?php echo format_traffic($current_user['traffic']); ?></div>
-                        </div>
-                        <div class="desc-item">
-                            <div class="desc-label">流量限制</div>
-                            <div class="desc-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
-                        </div>
-                        <div class="desc-item">
-                            <div class="desc-label">剩余流量</div>
-                            <div class="desc-value" style="color:#67c23a; font-weight:600;"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?></div>
-                        </div>
-                        <div class="desc-item">
                             <div class="desc-label">注册时间</div>
                             <div class="desc-value"><?php echo htmlspecialchars($current_user['created_at']); ?></div>
                         </div>
                     </div>
                     
-                    <div style="margin-top:20px;">
-                        <a href="index.php?action=change_password" class="btn">修改密码</a>
+                    <div class="profile-actions">
+                        <a href="index.php?action=change_password" class="btn btn-primary">修改密码</a>
                     </div>
                 </div>
 
             <?php elseif ($action == 'help'): ?>
                 <!-- 帮助中心 -->
                 <div class="card" style="max-width:800px;">
-                    <div class="card-title">❓ 帮助中心</div>
+                    <div class="card-title">帮助中心</div>
                     
                     <div style="margin-bottom:30px;">
                         <h3 style="font-size:18px; margin-bottom:15px; color:#1d2129;">快速开始</h3>
@@ -1601,5 +1659,30 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
 <?php endif; ?>
 
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast">
+        <div class="toast-icon">✓</div>
+        <div class="toast-message" id="toastMessage">操作成功</div>
+    </div>
+
+    <script>
+    function showToast(message, type) {
+        type = type || "success";
+        var toast = document.getElementById("toast");
+        var toastMessage = document.getElementById("toastMessage");
+        var toastIcon = toast.querySelector(".toast-icon");
+        toast.className = "toast " + (type === "success" ? "toast-success" : type === "error" ? "toast-error" : "toast-info");
+        if (type === "success") {
+            toastIcon.textContent = "✓";
+        } else if (type === "error") {
+            toastIcon.textContent = "!";
+        } else {
+            toastIcon.textContent = "i";
+        }
+        toastMessage.textContent = message;
+        setTimeout(function() { toast.classList.add("show"); }, 10);
+        setTimeout(function() { toast.classList.remove("show"); }, 2500);
+    }
+    </script>
 </body>
 </html>
