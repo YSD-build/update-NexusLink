@@ -2782,50 +2782,78 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                             </div>
                         </div>
 
-                        <!-- 个性化设置 -->
+                        <!-- 个人资料设置 -->
                         <div class="function-section">
                             <div class="section-title">
-                                <span class="section-icon section-icon-palette"></span>
-                                个性化设置
-                                <span class="section-badge section-badge-new">新</span>
+                                <span class="section-icon section-icon-user"></span>
+                                个人资料
                             </div>
-                            <div class="function-grid">
-                                <div class="function-card" onclick="toggleTheme()">
-                                    <div class="function-icon theme-icon"></div>
-                                    <div class="function-info">
-                                        <div class="function-name">主题切换</div>
-                                        <div class="function-desc">浅色 / 深色模式自由切换</div>
+                            <div class="profile-edit-card">
+                                <form method="post" action="api/user.php?action=update_profile">
+                                    <div class="form-group">
+                                        <label class="form-label">昵称</label>
+                                        <input type="text" name="nickname" class="form-input" 
+                                               value="<?php echo htmlspecialchars($current_user['nickname'] ?: ''); ?>"
+                                               placeholder="请输入昵称">
                                     </div>
-                                    <div class="function-arrow">
-                                        <span class="theme-toggle-switch">
-                                            <span class="theme-toggle-slider"></span>
+                                    <div class="form-group">
+                                        <label class="form-label">用户名</label>
+                                        <input type="text" class="form-input" 
+                                               value="<?php echo htmlspecialchars($current_user['username']); ?>"
+                                               disabled>
+                                        <span class="form-hint">用户名不可修改</span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">邮箱</label>
+                                        <input type="email" class="form-input" 
+                                               value="<?php echo htmlspecialchars($current_user['email']); ?>"
+                                               disabled>
+                                        <span class="form-hint">
+                                            <?php if ($current_user['email_verified']): ?>
+                                                <span class="text-success">✓ 已验证</span>
+                                            <?php else: ?>
+                                                <a href="index.php?action=verify_email" class="text-warning">未验证，去验证</a>
+                                            <?php endif; ?>
                                         </span>
                                     </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="btn btn-primary">保存修改</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- 账户信息 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon section-icon-info"></span>
+                                账户信息
+                            </div>
+                            <div class="account-info-grid">
+                                <div class="account-info-item">
+                                    <span class="account-info-label">用户ID</span>
+                                    <span class="account-info-value">#<?php echo $current_user['id']; ?></span>
                                 </div>
-                                <a href="index.php?action=profile_settings" class="function-card">
-                                    <div class="function-icon profile-settings-icon"></div>
-                                    <div class="function-info">
-                                        <div class="function-name">个人资料</div>
-                                        <div class="function-desc">编辑昵称、个人简介等信息</div>
-                                    </div>
-                                    <div class="function-arrow">→</div>
-                                </a>
-                                <a href="index.php?action=preferences" class="function-card">
-                                    <div class="function-icon preference-icon"></div>
-                                    <div class="function-info">
-                                        <div class="function-name">偏好设置</div>
-                                        <div class="function-desc">自定义显示和通知偏好</div>
-                                    </div>
-                                    <div class="function-arrow">→</div>
-                                </a>
-                                <a href="index.php?action=api_keys" class="function-card">
-                                    <div class="function-icon api-icon"></div>
-                                    <div class="function-info">
-                                        <div class="function-name">API 密钥</div>
-                                        <div class="function-desc">管理 API 访问密钥和权限</div>
-                                    </div>
-                                    <div class="function-arrow">→</div>
-                                </a>
+                                <div class="account-info-item">
+                                    <span class="account-info-label">用户角色</span>
+                                    <span class="account-info-value">
+                                        <?php echo $current_user['role'] == 'admin' ? '管理员' : '普通用户'; ?>
+                                    </span>
+                                </div>
+                                <div class="account-info-item">
+                                    <span class="account-info-label">注册时间</span>
+                                    <span class="account-info-value"><?php echo date('Y-m-d H:i', strtotime($current_user['created_at'])); ?></span>
+                                </div>
+                                <div class="account-info-item">
+                                    <span class="account-info-label">账户状态</span>
+                                    <span class="account-info-value">
+                                        <?php if ($current_user['status'] == 1): ?>
+                                            <span class="text-success">正常</span>
+                                        <?php else: ?>
+                                            <span class="text-error">已禁用</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -3126,36 +3154,6 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
         setTimeout(function() { toast.classList.remove("show"); }, 2500);
     }
 
-    // 主题切换功能
-    function toggleTheme() {
-        var body = document.body;
-        var isDark = body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        
-        // 更新所有主题切换开关的状态
-        var switches = document.querySelectorAll('.theme-toggle-switch');
-        switches.forEach(function(sw) {
-            if (isDark) {
-                sw.classList.add('active');
-            } else {
-                sw.classList.remove('active');
-            }
-        });
-        
-        showToast(isDark ? '已切换到深色模式' : '已切换到浅色模式', 'success');
-    }
-
-    // 页面加载时应用保存的主题
-    document.addEventListener('DOMContentLoaded', function() {
-        var savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark-mode');
-            var switches = document.querySelectorAll('.theme-toggle-switch');
-            switches.forEach(function(sw) {
-                sw.classList.add('active');
-            });
-        }
-    });
     </script>
 </body>
 </html>

@@ -18,6 +18,9 @@ switch ($action) {
     case 'password':
         change_password();
         break;
+    case 'update_profile':
+        update_profile();
+        break;
     default:
         error('无效的操作');
 }
@@ -88,4 +91,34 @@ function change_password() {
     Database::update('users', ['password' => $hashedPassword], 'id = ?', [$userId]);
 
     success([], '密码修改成功');
+}
+
+
+// 更新个人资料
+function update_profile() {
+    $auth = auth_required();
+    $userId = $auth['user_id'];
+    
+    $nickname = $_POST['nickname'] ?? '';
+    
+    // 验证昵称
+    if (empty($nickname)) {
+        error('昵称不能为空');
+    }
+    
+    if (mb_strlen($nickname) > 20) {
+        error('昵称不能超过20个字符');
+    }
+    
+    // 更新昵称
+    $result = Database::execute(
+        "UPDATE " . TABLE_PREFIX . "users SET nickname = ?, updated_at = NOW() WHERE id = ?",
+        [$nickname, $userId]
+    );
+    
+    if ($result) {
+        success(['message' => '资料更新成功', 'nickname' => $nickname]);
+    } else {
+        error('更新失败');
+    }
 }
