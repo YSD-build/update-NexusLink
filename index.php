@@ -1148,88 +1148,286 @@ function get_checkin_info($user_id) {
         <!-- 右侧主内容区 -->
         <div class="main-content">
             <?php if ($action == 'dashboard' || $action == 'home'): ?>
-                <div class="welcome-section">
-                    <div class="welcome-title">欢迎回来，<?php echo htmlspecialchars($current_user['nickname'] ?: $current_user['username']); ?></div>
-                    <div class="welcome-desc">开始使用 NexusLink 内网穿透，让您的服务随时随地可访问</div>
-                    <div class="welcome-buttons">
-                        <a href="index.php?action=tunnels" class="btn btn-primary">创建隧道</a>
-                        <a href="index.php?action=nodes" class="btn">查看节点</a>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card blue">
-                        <div class="stat-label">我的隧道</div>
-                        <div class="stat-value">
-                            <?php
-                            $tunnels = get_user_tunnels($current_user['id']);
-                            echo count($tunnels);
-                            ?>
+                <!-- 欢迎横幅 -->
+                <div class="welcome-banner">
+                    <div class="welcome-banner-bg"></div>
+                    <div class="welcome-banner-content">
+                        <div class="welcome-greeting">
+                            <span class="welcome-wave">👋</span>
+                            <span class="welcome-text">欢迎回来，</span>
+                            <span class="welcome-username"><?php echo htmlspecialchars($current_user['nickname'] ?: $current_user['username']); ?></span>
                         </div>
-                    </div>
-                    <div class="stat-card green">
-                        <div class="stat-label">在线节点</div>
-                        <div class="stat-value">
-                            <?php
-                            $nodes = get_nodes();
-                            echo count($nodes);
-                            ?>
+                        <div class="welcome-subtitle">
+                            开始使用 NexusLink 内网穿透，让您的服务随时随地可访问
                         </div>
-                    </div>
-                    <div class="stat-card orange">
-                        <div class="stat-label">已用流量</div>
-                        <div class="stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
-                    </div>
-                    <div class="stat-card red">
-                        <div class="stat-label">剩余流量</div>
-                        <div class="stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?></div>
-                    </div>
-                </div>
-
-                <!-- 签到卡片 -->
-                <?php
-                $checkin_info = get_checkin_info($current_user['id']);
-                ?>
-                <div class="checkin-card">
-                    <div class="checkin-card-content">
-                        <div>
-                            <div style="font-size:18px; font-weight:600; margin-bottom:8px;">
-                                每日签到领流量
-                            </div>
-                            <div style="opacity:0.9; font-size:14px;">
-                                <?php if ($checkin_info['today_checked']): ?>
-                                    今日已签到 · 连续 <?php echo $checkin_info['continuous_days']; ?> 天
-                                <?php else: ?>
-                                    今日还未签到 · 基础奖励 10 GB
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div>
-                            <?php if (!$checkin_info['today_checked']): ?>
-                            <form method="post" action="">
-                                <input type="hidden" name="action" value="checkin">
-                                <button type="submit" class="btn btn-glass">
-                                    立即签到
-                                </button>
-                            </form>
-                            <?php else: ?>
-                            <a href="index.php?action=checkin" class="btn btn-glass-light">
-                                查看详情
+                        <div class="welcome-actions">
+                            <a href="index.php?action=create_tunnel" class="btn btn-primary btn-lg">
+                                <span class="btn-icon">+</span>
+                                创建隧道
                             </a>
+                            <a href="index.php?action=nodes" class="btn btn-light btn-lg">
+                                查看节点
+                            </a>
+                        </div>
+                    </div>
+                    <div class="welcome-decoration">
+                        <div class="deco-circle deco-circle-1"></div>
+                        <div class="deco-circle deco-circle-2"></div>
+                        <div class="deco-circle deco-circle-3"></div>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="dashboard-stats">
+                    <div class="stat-card-enhanced stat-tunnels">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">
+                                <?php
+                                $user_tunnels = get_user_tunnels($current_user['id']);
+                                echo count($user_tunnels);
+                                ?>
+                            </div>
+                            <div class="stat-label">我的隧道</div>
+                        </div>
+                        <div class="stat-trend">
+                            <?php
+                            $active_tunnels = array_filter($user_tunnels, function($t) { return $t['status'] == 1; });
+                            echo count($active_tunnels) . ' 运行中';
+                            ?>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-enhanced stat-nodes">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">
+                                <?php
+                                $all_nodes = get_nodes();
+                                $online_nodes = array_filter($all_nodes, function($n) { return $n['status'] == 1; });
+                                echo count($online_nodes);
+                                ?>
+                            </div>
+                            <div class="stat-label">在线节点</div>
+                        </div>
+                        <div class="stat-trend">
+                            共 <?php echo count($all_nodes); ?> 个节点
+                        </div>
+                    </div>
+
+                    <div class="stat-card-enhanced stat-traffic">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number"><?php echo format_traffic($current_user['traffic']); ?></div>
+                            <div class="stat-label">已用流量</div>
+                        </div>
+                        <div class="stat-progress">
+                            <?php if ($current_user['traffic_limit']): ?>
+                                <?php $percent = min(100, round($current_user['traffic'] / $current_user['traffic_limit'] * 100, 1)); ?>
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill" style="width: <?php echo $percent; ?>%;"></div>
+                                </div>
+                                <span class="progress-text"><?php echo $percent; ?>%</span>
+                            <?php else: ?>
+                                <span class="progress-text">不限流量</span>
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-title">快速开始</div>
-                    <div style="color:#606266; line-height:1.8;">
-                        <p>1. 点击左侧「我的隧道」或上方按钮创建您的第一条隧道</p>
-                        <p>2. 选择节点，填写本地端口和远程端口</p>
-                        <p>3. 下载客户端，使用配置文件启动</p>
-                        <p>4. 享受高速稳定的内网穿透服务！</p>
+                    <div class="stat-card-enhanced stat-remain">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">
+                                <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
+                            </div>
+                            <div class="stat-label">剩余流量</div>
+                        </div>
+                        <div class="stat-trend positive">
+                            <?php
+                            $checkin_info = get_checkin_info($current_user['id']);
+                            if (!$checkin_info['today_checked']) {
+                                echo '签到可 +10GB';
+                            } else {
+                                echo '今日已签到';
+                            }
+                            ?>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 快捷操作和签到 -->
+                <div class="dashboard-grid">
+                    <!-- 签到卡片 -->
+                    <div class="card checkin-card-enhanced">
+                        <div class="card-header">
+                            <div class="card-title-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                            </div>
+                            <span>每日签到</span>
+                        </div>
+                        <div class="checkin-content">
+                            <div class="checkin-streak">
+                                <div class="streak-number"><?php echo $checkin_info['continuous_days']; ?></div>
+                                <div class="streak-label">连续签到天数</div>
+                            </div>
+                            <div class="checkin-status">
+                                <?php if ($checkin_info['today_checked']): ?>
+                                    <div class="status-badge success">今日已签到</div>
+                                    <div class="checkin-reward">已获得 +10GB 流量</div>
+                                <?php else: ?>
+                                    <div class="status-badge warning">今日未签到</div>
+                                    <div class="checkin-reward">签到可获得 +10GB 流量</div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="checkin-action">
+                                <?php if (!$checkin_info['today_checked']): ?>
+                                <form method="post" action="">
+                                    <input type="hidden" name="action" value="checkin">
+                                    <button type="submit" class="btn btn-primary btn-block">
+                                        立即签到
+                                    </button>
+                                </form>
+                                <?php else: ?>
+                                <a href="index.php?action=checkin" class="btn btn-block">
+                                    查看签到记录
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷操作 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                </svg>
+                            </div>
+                            <span>快捷操作</span>
+                        </div>
+                        <div class="quick-actions">
+                            <a href="index.php?action=create_tunnel" class="quick-action-item">
+                                <div class="quick-action-icon blue">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"/>
+                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                    </svg>
+                                </div>
+                                <div class="quick-action-text">
+                                    <div class="quick-action-title">创建隧道</div>
+                                    <div class="quick-action-desc">快速新建一条隧道</div>
+                                </div>
+                                <div class="quick-action-arrow">→</div>
+                            </a>
+                            <a href="index.php?action=checkin" class="quick-action-item">
+                                <div class="quick-action-icon green">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                    </svg>
+                                </div>
+                                <div class="quick-action-text">
+                                    <div class="quick-action-title">每日签到</div>
+                                    <div class="quick-action-desc">领取免费流量</div>
+                                </div>
+                                <div class="quick-action-arrow">→</div>
+                            </a>
+                            <a href="index.php?action=profile" class="quick-action-item">
+                                <div class="quick-action-icon purple">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                </div>
+                                <div class="quick-action-text">
+                                    <div class="quick-action-title">个人中心</div>
+                                    <div class="quick-action-desc">管理账户信息</div>
+                                </div>
+                                <div class="quick-action-arrow">→</div>
+                            </a>
+                            <a href="index.php?action=help" class="quick-action-item">
+                                <div class="quick-action-icon orange">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                    </svg>
+                                </div>
+                                <div class="quick-action-text">
+                                    <div class="quick-action-title">帮助中心</div>
+                                    <div class="quick-action-desc">查看使用教程</div>
+                                </div>
+                                <div class="quick-action-arrow">→</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近隧道 -->
+                <?php if (!empty($user_tunnels)): ?>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                            </svg>
+                        </div>
+                        <span>我的隧道</span>
+                        <a href="index.php?action=tunnels" class="card-more">查看全部 →</a>
+                    </div>
+                    <div class="recent-tunnels">
+                        <?php
+                        $recent_tunnels = array_slice($user_tunnels, 0, 4);
+                        foreach ($recent_tunnels as $tunnel):
+                            $node_name = '';
+                            foreach ($all_nodes as $node) {
+                                if ($node['id'] == $tunnel['node_id']) {
+                                    $node_name = $node['name'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        <div class="recent-tunnel-item">
+                            <div class="tunnel-status-dot <?php echo $tunnel['status'] == 1 ? 'online' : 'offline'; ?>"></div>
+                            <div class="tunnel-info">
+                                <div class="tunnel-name"><?php echo htmlspecialchars($tunnel['name']); ?></div>
+                                <div class="tunnel-meta">
+                                    <span class="tunnel-type"><?php echo strtoupper($tunnel['type']); ?></span>
+                                    <span class="tunnel-node"><?php echo htmlspecialchars($node_name); ?></span>
+                                    <span class="tunnel-port">:<?php echo $tunnel['remote_port']; ?></span>
+                                </div>
+                            </div>
+                            <div class="tunnel-traffic">
+                                <?php echo format_traffic($tunnel['traffic']); ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
             <?php elseif ($action == 'create_tunnel'): ?>
                 <!-- 创建隧道 -->
@@ -1535,100 +1733,298 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                 
             <?php elseif ($action == 'tunnels'): ?>
                 <!-- 隧道管理 -->
-                <div class="action-bar">
-                    <div class="action-bar-title">我的隧道</div>
-                    <a href="index.php?action=create_tunnel" class="btn btn-primary">+ 创建隧道</a>
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <h1 class="page-title">我的隧道</h1>
+                        <p class="page-desc">管理您的所有内网穿透隧道</p>
+                    </div>
+                    <a href="index.php?action=create_tunnel" class="btn btn-primary btn-lg">
+                        <span class="btn-icon">+</span>
+                        创建隧道
+                    </a>
                 </div>
 
                 <?php
                 $tunnels = get_user_tunnels($current_user['id']);
                 if ($tunnels):
                 ?>
-                <div class="tunnel-grid">
+                <div class="tunnel-stats-bar">
+                    <div class="tunnel-stat">
+                        <span class="tunnel-stat-number"><?php echo count($tunnels); ?></span>
+                        <span class="tunnel-stat-label">总隧道数</span>
+                    </div>
+                    <div class="tunnel-stat">
+                        <span class="tunnel-stat-number success">
+                            <?php
+                            $active_count = array_filter($tunnels, function($t) { return $t['status'] == 1; });
+                            echo count($active_count);
+                            ?>
+                        </span>
+                        <span class="tunnel-stat-label">运行中</span>
+                    </div>
+                    <div class="tunnel-stat">
+                        <span class="tunnel-stat-number warning">
+                            <?php
+                            $disabled_count = array_filter($tunnels, function($t) { return $t['status'] == 0; });
+                            echo count($disabled_count);
+                            ?>
+                        </span>
+                        <span class="tunnel-stat-label">已禁用</span>
+                    </div>
+                    <div class="tunnel-stat">
+                        <span class="tunnel-stat-number info">
+                            <?php
+                            $total_traffic = array_sum(array_column($tunnels, 'traffic'));
+                            echo format_traffic($total_traffic);
+                            ?>
+                        </span>
+                        <span class="tunnel-stat-label">总流量</span>
+                    </div>
+                </div>
+
+                <div class="tunnel-grid-enhanced">
                     <?php foreach ($tunnels as $tunnel): ?>
-                    <div class="tunnel-card <?php echo $tunnel['status'] == 0 ? 'tunnel-disabled' : ''; ?>">
-                        <div class="tunnel-card-header">
-                            <div class="tunnel-name"><?php echo htmlspecialchars($tunnel['name']); ?></div>
-                            <form method="post" action="" style="display:inline;">
+                    <div class="tunnel-card-enhanced <?php echo $tunnel['status'] == 1 ? 'status-active' : 'status-disabled'; ?>">
+                        <!-- 卡片顶部状态条 -->
+                        <div class="tunnel-card-topbar">
+                            <div class="tunnel-status-indicator">
+                                <span class="status-dot <?php echo $tunnel['status'] == 1 ? 'dot-online' : 'dot-offline'; ?>"></span>
+                                <span class="status-text"><?php echo $tunnel['status'] == 1 ? '运行中' : '已禁用'; ?></span>
+                            </div>
+                            <span class="tunnel-type-badge type-<?php echo $tunnel['type']; ?>">
+                                <?php echo strtoupper($tunnel['type']); ?>
+                            </span>
+                        </div>
+
+                        <!-- 卡片主体 -->
+                        <div class="tunnel-card-main">
+                            <div class="tunnel-card-title">
+                                <h3 class="tunnel-name-enhanced"><?php echo htmlspecialchars($tunnel['name']); ?></h3>
+                                <div class="tunnel-node-badge">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                        <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <?php echo htmlspecialchars($tunnel['node_name'] ?: '未知节点'); ?>
+                                </div>
+                            </div>
+
+                            <div class="tunnel-details-grid">
+                                <div class="tunnel-detail-item">
+                                    <span class="detail-label">本地地址</span>
+                                    <span class="detail-value mono"><?php echo htmlspecialchars($tunnel['local_addr']); ?>:<?php echo $tunnel['local_port']; ?></span>
+                                </div>
+                                <div class="tunnel-detail-item">
+                                    <span class="detail-label">远程端口</span>
+                                    <span class="detail-value mono accent"><?php echo $tunnel['remote_port']; ?></span>
+                                </div>
+                                <div class="tunnel-detail-item">
+                                    <span class="detail-label">已用流量</span>
+                                    <span class="detail-value"><?php echo format_traffic($tunnel['traffic']); ?></span>
+                                </div>
+                                <div class="tunnel-detail-item">
+                                    <span class="detail-label">创建时间</span>
+                                    <span class="detail-value"><?php echo date('m-d', strtotime($tunnel['created_at'])); ?></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 卡片操作区 -->
+                        <div class="tunnel-card-actions">
+                            <form method="post" action="" class="toggle-form">
                                 <input type="hidden" name="action" value="toggle_tunnel">
                                 <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
-                                <button type="submit" class="tunnel-switch <?php echo $tunnel['status'] == 1 ? 'active' : ''; ?>" title="<?php echo $tunnel['status'] == 1 ? '点击禁用' : '点击启用'; ?>">
-                                    <span class="switch-slider"></span>
+                                <button type="submit" class="toggle-btn <?php echo $tunnel['status'] == 1 ? 'toggled' : ''; ?>">
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+                                    <span class="toggle-label"><?php echo $tunnel['status'] == 1 ? '已启用' : '已禁用'; ?></span>
                                 </button>
                             </form>
-                        </div>
-                        <div class="tunnel-card-body">
-                            <div class="tunnel-info">
-                                <span class="tunnel-info-label">节点</span>
-                                <span class="tunnel-info-value"><?php echo htmlspecialchars($tunnel['node_name'] ?: '-'); ?></span>
+                            
+                            <div class="action-buttons">
+                                <a href="index.php?action=tunnel_config&id=<?php echo $tunnel['id']; ?>" class="action-btn" title="查看配置">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                        <polyline points="10 9 9 9 8 9"/>
+                                    </svg>
+                                    配置
+                                </a>
+                                <a href="index.php?action=edit_tunnel&id=<?php echo $tunnel['id']; ?>" class="action-btn" title="编辑">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </a>
+                                <form method="post" action="" style="display:inline;" onsubmit="return confirm('确定要删除这个隧道吗？');">
+                                    <input type="hidden" name="action" value="delete_tunnel">
+                                    <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
+                                    <button type="submit" class="action-btn danger" title="删除">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </form>
                             </div>
-                            <div class="tunnel-info">
-                                <span class="tunnel-info-label">类型</span>
-                                <span class="tag tag-primary" style="margin:0;"><?php echo strtoupper($tunnel['type']); ?></span>
-                            </div>
-                            <div class="tunnel-info">
-                                <span class="tunnel-info-label">本地地址</span>
-                                <span class="tunnel-info-value mono"><?php echo htmlspecialchars($tunnel['local_addr']); ?>:<?php echo htmlspecialchars($tunnel['local_port']); ?></span>
-                            </div>
-                            <div class="tunnel-info">
-                                <span class="tunnel-info-label">远程端口</span>
-                                <span class="tunnel-info-value mono"><?php echo htmlspecialchars($tunnel['remote_port']); ?></span>
-                            </div>
-                            <div class="tunnel-info">
-                                <span class="tunnel-info-label">已用流量</span>
-                                <span class="tunnel-info-value"><?php echo format_traffic($tunnel['traffic']); ?></span>
-                            </div>
-                        </div>
-                        <div class="tunnel-card-footer">
-                            <a href="index.php?action=tunnel_config&id=<?php echo $tunnel['id']; ?>" class="btn btn-small">查看配置</a>
-                            <a href="index.php?action=edit_tunnel&id=<?php echo $tunnel['id']; ?>" class="btn btn-small">编辑</a>
-                            <form method="post" action="" style="display:inline;" onsubmit="return confirm('确定要删除这个隧道吗？');">
-                                <input type="hidden" name="action" value="delete_tunnel">
-                                <input type="hidden" name="tunnel_id" value="<?php echo $tunnel['id']; ?>">
-                                <button type="submit" class="btn btn-small btn-danger">删除</button>
-                            </form>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
                 <?php else: ?>
-                <div class="empty">
-                    <div class="empty-icon" style="width:64px; height:64px; background:var(--info-light); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px; color:var(--text-secondary);">
-                        <span style="width:24px; height:24px; border:2px solid currentColor; border-radius:4px; position:relative;">
-                            <span style="position:absolute; top:6px; left:3px; width:18px; height:2px; background:currentColor;"></span>
-                            <span style="position:absolute; top:12px; left:3px; width:18px; height:2px; background:currentColor;"></span>
-                        </span>
+                <div class="empty-state-enhanced">
+                    <div class="empty-illustration">
+                        <div class="empty-icon-large">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                            </svg>
+                        </div>
                     </div>
-                    <div class="empty-text">暂无隧道，点击上方按钮创建</div>
-                    <a href="index.php?action=create_tunnel" class="btn btn-primary">创建第一个隧道</a>
+                    <h3 class="empty-title">还没有隧道</h3>
+                    <p class="empty-desc">创建您的第一条内网穿透隧道，让本地服务随时可访问</p>
+                    <a href="index.php?action=create_tunnel" class="btn btn-primary btn-lg">
+                        <span class="btn-icon">+</span>
+                        创建第一个隧道
+                    </a>
+                    
+                    <div class="empty-features">
+                        <div class="empty-feature">
+                            <div class="feature-icon blue">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                </svg>
+                            </div>
+                            <span>高速稳定</span>
+                        </div>
+                        <div class="empty-feature">
+                            <div class="feature-icon green">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                            </div>
+                            <span>安全可靠</span>
+                        </div>
+                        <div class="empty-feature">
+                            <div class="feature-icon purple">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                            <span>即开即用</span>
+                        </div>
+                    </div>
                 </div>
                 <?php endif; ?>
 
             <?php elseif ($action == 'nodes'): ?>
                 <!-- 节点列表 -->
-                <div class="action-bar">
-                    <div class="action-bar-title">节点列表</div>
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <h1 class="page-title">节点列表</h1>
+                        <p class="page-desc">选择最优节点，享受高速稳定的内网穿透服务</p>
+                    </div>
                 </div>
 
-                <div class="node-grid">
+                <div class="node-stats">
+                    <div class="node-stat-card">
+                        <div class="node-stat-icon online">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div class="node-stat-info">
+                            <div class="node-stat-number">
+                                <?php
+                                $all_nodes = get_nodes();
+                                $online = array_filter($all_nodes, function($n) { return $n['status'] == 1; });
+                                echo count($online);
+                                ?>
+                            </div>
+                            <div class="node-stat-label">在线节点</div>
+                        </div>
+                    </div>
+                    <div class="node-stat-card">
+                        <div class="node-stat-icon total">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                            </svg>
+                        </div>
+                        <div class="node-stat-info">
+                            <div class="node-stat-number"><?php echo count($all_nodes); ?></div>
+                            <div class="node-stat-label">全部节点</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="node-grid-enhanced">
                     <?php
                     $nodes = get_nodes();
                     if ($nodes):
                         foreach ($nodes as $node):
                     ?>
-                    <div class="node-card">
-                        <div class="node-name"><?php echo htmlspecialchars($node['name']); ?></div>
-                        <div class="node-location"><?php echo htmlspecialchars($node['location']); ?></div>
-                        <div class="node-info">
-                            <div>地址: <?php echo htmlspecialchars($node['host']); ?>:<?php echo htmlspecialchars($node['port']); ?></div>
-                            <div>端口范围: <?php echo htmlspecialchars($node['min_port']); ?> - <?php echo htmlspecialchars($node['max_port']); ?></div>
-                            <div><span class="node-status">● 在线</span></div>
+                    <div class="node-card-enhanced <?php echo $node['status'] == 1 ? 'node-online' : 'node-offline'; ?>">
+                        <div class="node-card-decoration"></div>
+                        
+                        <div class="node-card-header">
+                            <div class="node-icon-wrapper">
+                                <div class="node-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                        <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                </div>
+                                <span class="node-status-dot <?php echo $node['status'] == 1 ? 'dot-online' : 'dot-offline'; ?>"></span>
+                            </div>
+                            <div class="node-title-area">
+                                <h3 class="node-name-enhanced"><?php echo htmlspecialchars($node['name']); ?></h3>
+                                <span class="node-location-badge">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                        <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <?php echo htmlspecialchars($node['location'] ?: '未知位置'); ?>
+                                </span>
+                            </div>
+                            <span class="node-status-badge <?php echo $node['status'] == 1 ? 'badge-online' : 'badge-offline'; ?>">
+                                <?php echo $node['status'] == 1 ? '在线' : '离线'; ?>
+                            </span>
                         </div>
+
+                        <div class="node-card-info">
+                            <div class="node-info-row">
+                                <span class="info-label">节点地址</span>
+                                <span class="info-value mono"><?php echo htmlspecialchars($node['host']); ?></span>
+                            </div>
+                            <div class="node-info-row">
+                                <span class="info-label">通信端口</span>
+                                <span class="info-value mono"><?php echo $node['port']; ?></span>
+                            </div>
+                            <div class="node-info-row">
+                                <span class="info-label">端口范围</span>
+                                <span class="info-value mono"><?php echo $node['min_port']; ?> - <?php echo $node['max_port']; ?></span>
+                            </div>
+                        </div>
+
                         <?php if ($node['description']): ?>
-                        <div class="node-desc"><?php echo htmlspecialchars($node['description']); ?></div>
+                        <div class="node-card-desc">
+                            <?php echo htmlspecialchars($node['description']); ?>
+                        </div>
                         <?php endif; ?>
-                        <div style="margin-top:12px;">
-                            <a href="index.php?action=create_tunnel&node_id=<?php echo $node['id']; ?>" class="btn btn-primary btn-small">创建隧道</a>
+
+                        <div class="node-card-footer">
+                            <a href="index.php?action=create_tunnel&node_id=<?php echo $node['id']; ?>" class="btn btn-primary btn-block btn-small <?php echo $node['status'] != 1 ? 'disabled' : ''; ?>">
+                                <?php echo $node['status'] == 1 ? '使用此节点创建隧道' : '节点暂不可用'; ?>
+                            </a>
                         </div>
                     </div>
                     <?php
