@@ -1488,76 +1488,219 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
             <?php elseif ($action == 'profile'): ?>
                 <!-- 个人中心 -->
-                <div class="card profile-card">
-                    <div class="card-title">
-                        <span class="card-title-icon icon-user"></span>
-                        个人信息
-                    </div>
-                    
-                    <!-- 流量概览卡片 -->
-                    <div class="traffic-overview">
-                        <div class="traffic-header">
-                            <div class="traffic-title">流量使用情况</div>
-                            <div class="traffic-percent">
-                                <?php 
-                                $traffic_percent = 0;
-                                if ($current_user['traffic_limit'] > 0) {
-                                    $traffic_percent = min(100, round($current_user['traffic'] / $current_user['traffic_limit'] * 100));
-                                }
-                                echo $current_user['traffic_limit'] ? $traffic_percent . '%' : '不限';
-                                ?>
-                            </div>
+                <div class="user-center">
+                    <!-- 用户信息头部卡片 -->
+                    <div class="user-header-card">
+                        <div class="user-avatar">
+                            <?php echo strtoupper(substr($current_user['username'], 0, 1)); ?>
                         </div>
-                        <div class="progress-bar">
-                            <div class="progress-bar-inner" style="width: <?php echo $current_user['traffic_limit'] ? $traffic_percent : 100; ?>%;"></div>
-                        </div>
-                        <div class="traffic-stats">
-                            <div class="traffic-stat-item">
-                                <div class="traffic-stat-label">已用流量</div>
-                                <div class="traffic-stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
-                            </div>
-                            <div class="traffic-stat-item">
-                                <div class="traffic-stat-label">剩余流量</div>
-                                <div class="traffic-stat-value text-success">
-                                    <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
-                                </div>
-                            </div>
-                            <div class="traffic-stat-item">
-                                <div class="traffic-stat-label">总流量</div>
-                                <div class="traffic-stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="desc-list">
-                        <div class="desc-item">
-                            <div class="desc-label">用户名</div>
-                            <div class="desc-value"><?php echo htmlspecialchars($current_user['username']); ?></div>
-                        </div>
-                        <div class="desc-item">
-                            <div class="desc-label">昵称</div>
-                            <div class="desc-value"><?php echo htmlspecialchars($current_user['nickname'] ?: '-'); ?></div>
-                        </div>
-                        <div class="desc-item">
-                            <div class="desc-label">邮箱</div>
-                            <div class="desc-value"><?php echo htmlspecialchars($current_user['email']); ?></div>
-                        </div>
-                        <div class="desc-item">
-                            <div class="desc-label">角色</div>
-                            <div class="desc-value">
-                                <span class="tag <?php echo $current_user['role'] == 'admin' ? 'tag-primary' : 'tag-info'; ?>">
+                        <div class="user-info">
+                            <div class="user-name">
+                                <?php echo htmlspecialchars($current_user['nickname'] ?: $current_user['username']); ?>
+                                <span class="user-role-tag <?php echo $current_user['role'] == 'admin' ? 'role-admin' : 'role-user'; ?>">
                                     <?php echo $current_user['role'] == 'admin' ? '管理员' : '普通用户'; ?>
                                 </span>
                             </div>
+                            <div class="user-email"><?php echo htmlspecialchars($current_user['email']); ?></div>
+                            <div class="user-meta">
+                                <span>注册时间：<?php echo date('Y-m-d', strtotime($current_user['created_at'])); ?></span>
+                                <span>UID：#<?php echo $current_user['id']; ?></span>
+                            </div>
                         </div>
-                        <div class="desc-item">
-                            <div class="desc-label">注册时间</div>
-                            <div class="desc-value"><?php echo htmlspecialchars($current_user['created_at']); ?></div>
+                        <div class="user-quick-actions">
+                            <a href="index.php?action=create_tunnel" class="btn btn-primary">
+                                + 创建隧道
+                            </a>
                         </div>
                     </div>
-                    
-                    <div class="profile-actions">
-                        <a href="index.php?action=change_password" class="btn btn-primary">修改密码</a>
+
+                    <!-- 流量概览卡片 -->
+                    <div class="traffic-overview-card">
+                        <div class="section-title">
+                            <span class="section-icon">📊</span>
+                            流量概览
+                        </div>
+                        <div class="traffic-progress-section">
+                            <div class="traffic-progress-header">
+                                <span>本月已用</span>
+                                <span class="traffic-percent">
+                                    <?php 
+                                    $traffic_percent = 0;
+                                    if ($current_user['traffic_limit'] > 0) {
+                                        $traffic_percent = min(100, round($current_user['traffic'] / $current_user['traffic_limit'] * 100));
+                                    }
+                                    echo $current_user['traffic_limit'] ? $traffic_percent . '%' : '不限';
+                                    ?>
+                                </span>
+                            </div>
+                            <div class="progress-bar large">
+                                <div class="progress-bar-inner" style="width: <?php echo $current_user['traffic_limit'] ? $traffic_percent : 100; ?>%;"></div>
+                            </div>
+                        </div>
+                        <div class="traffic-stats-grid">
+                            <div class="traffic-stat-card">
+                                <div class="stat-label">已用流量</div>
+                                <div class="stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
+                            </div>
+                            <div class="traffic-stat-card">
+                                <div class="stat-label">剩余流量</div>
+                                <div class="stat-value text-success">
+                                    <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
+                                </div>
+                            </div>
+                            <div class="traffic-stat-card">
+                                <div class="stat-label">总流量</div>
+                                <div class="stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
+                            </div>
+                            <div class="traffic-stat-card">
+                                <div class="stat-label">隧道数量</div>
+                                <div class="stat-value">
+                                    <?php
+                                    $tunnel_count = 0;
+                                    if (function_exists('get_user_tunnels')) {
+                                        $tunnels = get_user_tunnels($current_user['id']);
+                                        $tunnel_count = count($tunnels);
+                                    }
+                                    echo $tunnel_count;
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 功能分类区域 -->
+                    <div class="function-sections">
+                        <!-- 账户安全 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon">🔐</span>
+                                账户安全
+                            </div>
+                            <div class="function-grid">
+                                <a href="index.php?action=change_password" class="function-card">
+                                    <div class="function-icon password-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">修改密码</div>
+                                        <div class="function-desc">定期修改密码保障账户安全</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <div class="function-card disabled">
+                                    <div class="function-icon email-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">邮箱验证</div>
+                                        <div class="function-desc">
+                                            <?php if ($current_user['email_verified']): ?>
+                                                <span class="text-success">已验证</span>
+                                            <?php else: ?>
+                                                <span class="text-warning">未验证</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </div>
+                                <div class="function-card disabled">
+                                    <div class="function-icon login-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">登录记录</div>
+                                        <div class="function-desc">查看账户登录历史记录</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </div>
+                                <div class="function-card disabled">
+                                    <div class="function-icon api-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">API 密钥</div>
+                                        <div class="function-desc">管理 API 访问密钥</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 隧道管理 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon">🌐</span>
+                                隧道管理
+                            </div>
+                            <div class="function-grid">
+                                <a href="index.php?action=tunnels" class="function-card">
+                                    <div class="function-icon tunnel-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">我的隧道</div>
+                                        <div class="function-desc">管理所有已创建的隧道</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=create_tunnel" class="function-card">
+                                    <div class="function-icon add-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">创建隧道</div>
+                                        <div class="function-desc">快速创建新的内网穿透隧道</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=nodes" class="function-card">
+                                    <div class="function-icon node-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">节点列表</div>
+                                        <div class="function-desc">查看所有可用节点信息</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=help" class="function-card">
+                                    <div class="function-icon doc-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">使用教程</div>
+                                        <div class="function-desc">客户端配置和使用指南</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- 其他功能 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon">⚙️</span>
+                                其他功能
+                            </div>
+                            <div class="function-grid">
+                                <a href="index.php?action=checkin" class="function-card">
+                                    <div class="function-icon checkin-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">每日签到</div>
+                                        <div class="function-desc">签到领取免费流量奖励</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=help" class="function-card">
+                                    <div class="function-icon help-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">帮助中心</div>
+                                        <div class="function-desc">常见问题和使用帮助</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=about" class="function-card">
+                                    <div class="function-icon about-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">关于我们</div>
+                                        <div class="function-desc">了解 NexusLink 平台</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <div class="function-card logout-card" onclick="if(confirm('确定要退出登录吗？')) window.location.href='index.php?action=logout'">
+                                    <div class="function-icon logout-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">退出登录</div>
+                                        <div class="function-desc">安全退出当前账户</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
