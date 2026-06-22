@@ -2591,10 +2591,7 @@ $stats = get_admin_stats();
                         </form>
                         
                         <?php if ($update_info && $update_info['has_update']): ?>
-                        <form method="post" style="display:inline;" onsubmit="return confirm('确定要更新系统吗？更新前会自动备份当前版本。');">
-                            <input type="hidden" name="do_update" value="1">
-                            <button type="submit" class="btn btn-warning">立即更新</button>
-                        </form>
+                        <a href="admin.php?action=update_confirm" class="btn btn-warning">立即更新</a>
                         <?php endif; ?>
                     </div>
                 </div>
