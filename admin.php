@@ -707,6 +707,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $update_result = $updater->doUpdate();
         // 更新后重新检查
         $update_info = $updater->checkUpdate();
+        // AJAX 请求返回 JSON
+        if (!empty($_POST['ajax'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($update_result);
+            exit;
+        }
     } elseif (isset($_POST['rollback']) && !empty($_POST['backup_dir'])) {
         $update_result = $updater->rollback($_POST['backup_dir']);
     }
@@ -2635,6 +2641,211 @@ $stats = get_admin_stats();
                     </div>
                 </div>
                 
+
+            <?php elseif ($action == 'update_confirm'): ?>
+                <!-- 更新确认 -->
+                <div class="card" style="max-width:600px; margin:0 auto;">
+                    <div class="card-title" style="text-align:center; font-size:18px;">
+                        ⚠️ 系统更新确认
+                    </div>
+                    
+                    <div style="padding:20px 0;">
+                        <div style="background:var(--warning-light); padding:16px; border-radius:var(--radius-medium); margin-bottom:20px;">
+                            <p style="margin:0 0 10px 0; font-weight:600; color:var(--warning-color);">重要提示</p>
+                            <ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8; color:var(--text-primary);">
+                                <li>更新过程中请勿关闭页面或刷新</li>
+                                <li>系统会自动备份当前版本</li>
+                                <li>更新失败可从备份回滚</li>
+                                <li>请确保服务器有足够的磁盘空间</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="info-list" style="margin-bottom:20px;">
+                            <div class="info-item">
+                                <div class="info-label">当前版本</div>
+                                <div class="info-value"><?php echo CURRENT_VERSION; ?></div>
+                            </div>
+                            <?php if ($update_info && !empty($update_info['latest_version'])): ?>
+                            <div class="info-item">
+                                <div class="info-label">目标版本</div>
+                                <div class="info-value" style="color:var(--warning-color);">
+                                    <?php echo htmlspecialchars($update_info['latest_version']); ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <p style="text-align:center; font-size:14px; margin-bottom:16px;">
+                            请输入 <strong style="color:var(--success-color);">Yes</strong> 确认更新，或输入 <strong style="color:var(--danger-color);">No</strong> 返回
+                        </p>
+                        
+                        <form method="post" action="admin.php?action=update_progress" style="display:flex; gap:10px;">
+                            <input type="text" name="confirm" placeholder="输入 Yes 或 No" 
+                                   style="flex:1; padding:10px 14px; border:2px solid var(--border-color); border-radius:var(--radius-medium); font-size:14px; outline:none;"
+                                   oninput="this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1).toLowerCase()"
+                                   autocomplete="off">
+                            <button type="submit" class="btn btn-primary" style="padding:10px 24px;">确认</button>
+                        </form>
+                        
+                        <div style="margin-top:16px; text-align:center;">
+                            <a href="admin.php?action=update" style="color:var(--text-secondary); font-size:13px;">← 返回系统更新</a>
+                        </div>
+                    </div>
+                </div>
+
+            <?php elseif ($action == 'update_progress'): ?>
+                <!-- 更新进度 -->
+                <div class="card" style="max-width:600px; margin:0 auto;">
+                    <div class="card-title" style="text-align:center; font-size:18px;">
+                        🔄 系统更新中
+                    </div>
+                    
+                    <?php
+                    $confirm = strtolower(trim($_POST['confirm'] ?? ''));
+                    
+                    if ($confirm != 'yes'):
+                    ?>
+                    <!-- 取消更新 -->
+                    <div style="padding:40px 20px; text-align:center;">
+                        <div style="font-size:48px; margin-bottom:16px;">❌</div>
+                        <h3 style="margin:0 0 8px 0; color:var(--danger-color);">更新已取消</h3>
+                        <p style="color:var(--text-secondary); margin-bottom:20px;">您选择了取消更新，系统未做任何修改</p>
+                        <a href="admin.php?action=update" class="btn btn-primary">返回系统更新</a>
+                    </div>
+                    <?php else: ?>
+                    <!-- 更新进度条 -->
+                    <div style="padding:20px 0;">
+                        <div class="progress-container" style="margin-bottom:20px;">
+                            <div class="progress-bar" id="progressBar" style="width:0%; height:24px; background:linear-gradient(90deg, var(--primary-color), var(--success-color)); border-radius:12px; transition:width 0.3s ease;"></div>
+                        </div>
+                        <div style="text-align:center; margin-bottom:20px;">
+                            <span id="progressText" style="font-size:14px; font-weight:600;">准备中...</span>
+                            <span id="progressPercent" style="font-size:14px; color:var(--text-secondary); margin-left:8px;">0%</span>
+                        </div>
+                        
+                        <div id="updateLog" style="background:var(--bg-secondary); padding:16px; border-radius:var(--radius-medium); font-family:monospace; font-size:12px; line-height:1.6; max-height:300px; overflow-y:auto;">
+                            <div style="color:var(--text-secondary);">[系统] 正在初始化更新...</div>
+                        </div>
+                        
+                        <div id="updateResult" style="display:none; margin-top:20px; text-align:center;">
+                            <a href="admin.php?action=update" class="btn btn-primary">返回系统更新</a>
+                        </div>
+                    </div>
+                    
+                    <script>
+                    (function() {
+                        const progressBar = document.getElementById('progressBar');
+                        const progressText = document.getElementById('progressText');
+                        const progressPercent = document.getElementById('progressPercent');
+                        const updateLog = document.getElementById('updateLog');
+                        const updateResult = document.getElementById('updateResult');
+                        
+                        let progress = 0;
+                        let currentStep = 0;
+                        
+                        const steps = [
+                            { text: '检查更新信息...', percent: 10 },
+                            { text: '备份当前版本...', percent: 25 },
+                            { text: '下载更新包...', percent: 50 },
+                            { text: '解压更新文件...', percent: 70 },
+                            { text: '替换系统文件...', percent: 85 },
+                            { text: '更新版本信息...', percent: 95 },
+                            { text: '清理临时文件...', percent: 100 }
+                        ];
+                        
+                        function addLog(message, type) {
+                            const div = document.createElement('div');
+                            if (type === 'success') {
+                                div.style.color = 'var(--success-color)';
+                            } else if (type === 'error') {
+                                div.style.color = 'var(--danger-color)';
+                            } else if (type === 'info') {
+                                div.style.color = 'var(--primary-color)';
+                            } else {
+                                div.style.color = 'var(--text-secondary)';
+                            }
+                            const time = new Date().toLocaleTimeString();
+                            div.textContent = '[' + time + '] ' + message;
+                            updateLog.appendChild(div);
+                            updateLog.scrollTop = updateLog.scrollHeight;
+                        }
+                        
+                        function updateProgress() {
+                            if (currentStep >= steps.length) {
+                                // 更新完成
+                                progressBar.style.width = '100%';
+                                progressPercent.textContent = '100%';
+                                progressText.textContent = '更新完成！';
+                                progressText.style.color = 'var(--success-color)';
+                                addLog('系统更新成功完成！', 'success');
+                                addLog('正在跳转到更新页面...', 'info');
+                                updateResult.style.display = 'block';
+                                
+                                // 3秒后自动跳转
+                                setTimeout(function() {
+                                    window.location.href = 'admin.php?action=update';
+                                }, 3000);
+                                return;
+                            }
+                            
+                            const step = steps[currentStep];
+                            progressText.textContent = step.text;
+                            
+                            // 模拟进度增长
+                            const targetPercent = step.percent;
+                            const interval = setInterval(function() {
+                                if (progress >= targetPercent) {
+                                    clearInterval(interval);
+                                    addLog(step.text + ' 完成', 'success');
+                                    currentStep++;
+                                    setTimeout(updateProgress, 500);
+                                } else {
+                                    progress++;
+                                    progressBar.style.width = progress + '%';
+                                    progressPercent.textContent = progress + '%';
+                                }
+                            }, 30);
+                        }
+                        
+                        // 开始执行实际更新
+                        addLog('开始执行系统更新...', 'info');
+                        
+                        // 发送AJAX请求执行更新
+                        const formData = new FormData();
+                        formData.append('do_update', '1');
+                        formData.append('ajax', '1');
+                        
+                        fetch('admin.php?action=update', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                addLog('更新执行成功', 'success');
+                                if (data.message) {
+                                    addLog(data.message, 'info');
+                                }
+                            } else {
+                                addLog('更新失败: ' + (data.message || '未知错误'), 'error');
+                                progressText.textContent = '更新失败';
+                                progressText.style.color = 'var(--danger-color)';
+                                updateResult.style.display = 'block';
+                            }
+                        })
+                        .catch(error => {
+                            addLog('更新请求失败: ' + error.message, 'error');
+                            progressText.textContent = '更新失败';
+                            progressText.style.color = 'var(--danger-color)';
+                            updateResult.style.display = 'block';
+                        });
+                        
+                        // 同时启动进度条动画
+                        setTimeout(updateProgress, 500);
+                    })();
+                    </script>
+                    <?php endif; ?>
+                </div>
             <?php elseif ($action == 'about'): ?>
                 <!-- 关于系统 -->
                 <div class="card" style="max-width:600px;">
