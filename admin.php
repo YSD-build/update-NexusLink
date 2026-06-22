@@ -42,6 +42,7 @@ function init_settings() {
             // 插入默认设置
             $default_settings = [
                 'site_name' => 'NexusLink',
+                'site_url' => '',
                 'site_description' => '高性能内网穿透平台',
                 'register_enabled' => '1',
                 'email_verify_required' => '0',
@@ -187,6 +188,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     // 站点设置
     if (isset($_POST['site_name'])) {
         save_setting('site_name', trim($_POST['site_name']));
+    }
+    if (isset($_POST['site_url'])) {
+        save_setting('site_url', rtrim(trim($_POST['site_url']), '/'));
     }
     if (isset($_POST['site_description'])) {
         save_setting('site_description', trim($_POST['site_description']));
@@ -1066,6 +1070,14 @@ $stats = get_admin_stats();
                                 <p>设置网站的名称，显示在标题和页面中</p>
                             </div>
                             <input type="text" name="site_name" class="form-input" style="width:200px;" value="<?php echo htmlspecialchars($settings['site_name'] ?? 'NexusLink'); ?>">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>站点URL</h4>
+                                <p>网站的访问地址，用于邮件中的链接生成（如 http://51.tokenr.cn）</p>
+                            </div>
+                            <input type="text" name="site_url" class="form-input" style="width:300px;" placeholder="http://51.tokenr.cn" value="<?php echo htmlspecialchars($settings['site_url'] ?? ''); ?>">
                         </div>
                         
                         <div class="setting-item">

@@ -59,6 +59,74 @@ class Mailer {
     }
     
     /**
+     * 获取站点URL
+     * 优先从数据库设置表读取，其次使用常量配置
+     * @return string
+     */
+    private static function getSiteUrl() {
+        static $siteUrl = null;
+        if ($siteUrl !== null) {
+            return $siteUrl;
+        }
+        
+        $siteUrl = SITE_URL;
+        
+        // 尝试从数据库读取配置
+        try {
+            if (class_exists('Database')) {
+                $db = Database::getInstance()->getPdo();
+                $prefix = TABLE_PREFIX;
+                
+                $stmt = $db->prepare("SELECT setting_value FROM {$prefix}settings WHERE setting_key = 'site_url'");
+                $stmt->execute();
+                $result = $stmt->fetchColumn();
+                
+                if ($result) {
+                    $siteUrl = rtrim($result, '/');
+                }
+            }
+        } catch (Exception $e) {
+            // 数据库读取失败，使用常量配置
+        }
+        
+        return $siteUrl;
+    }
+    
+    /**
+     * 获取站点名称
+     * 优先从数据库设置表读取，其次使用常量配置
+     * @return string
+     */
+    private static function getSiteName() {
+        static $siteName = null;
+        if ($siteName !== null) {
+            return $siteName;
+        }
+        
+        $siteName = SITE_NAME;
+        
+        // 尝试从数据库读取配置
+        try {
+            if (class_exists('Database')) {
+                $db = Database::getInstance()->getPdo();
+                $prefix = TABLE_PREFIX;
+                
+                $stmt = $db->prepare("SELECT setting_value FROM {$prefix}settings WHERE setting_key = 'site_name'");
+                $stmt->execute();
+                $result = $stmt->fetchColumn();
+                
+                if ($result) {
+                    $siteName = $result;
+                }
+            }
+        } catch (Exception $e) {
+            // 数据库读取失败，使用常量配置
+        }
+        
+        return $siteName;
+    }
+    
+    /**
      * 发送邮件
      * @param string $to 收件人邮箱
      * @param string $subject 邮件主题
@@ -263,18 +331,20 @@ class Mailer {
      * @return bool 是否发送成功
      */
     public static function sendVerifyEmail($email, $username, $token) {
-        $subject = '【' . SITE_NAME . '】请验证您的邮箱';
-        $verifyUrl = SITE_URL . '/?verify=' . $token;
+        $siteName = self::getSiteName();
+        $siteUrl = self::getSiteUrl();
+        $subject = '【' . $siteName . '】请验证您的邮箱';
+        $verifyUrl = $siteUrl . '/?verify=' . $token;
         
         $body = '
         <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                <h2 style="color: white; margin: 0; font-size: 24px;">欢迎加入 ' . SITE_NAME . '</h2>
+                <h2 style="color: white; margin: 0; font-size: 24px;">欢迎加入 ' . $siteName . '</h2>
                 <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">' . $username . '，您好！</p>
             </div>
             <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
                 <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-                    感谢您注册 ' . SITE_NAME . '！请点击下方按钮验证您的邮箱地址，以激活您的账号。
+                    感谢您注册 ' . $siteName . '！请点击下方按钮验证您的邮箱地址，以激活您的账号。
                 </p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="' . $verifyUrl . '" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">
@@ -288,7 +358,7 @@ class Mailer {
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
                     <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                         此邮件由系统自动发送，请勿直接回复。<br>
-                        如果您没有注册过 ' . SITE_NAME . '，请忽略此邮件。
+                        如果您没有注册过 ' . $siteName . '，请忽略此邮件。
                     </p>
                 </div>
             </div>
@@ -305,8 +375,10 @@ class Mailer {
      * @return bool 是否发送成功
      */
     public static function sendResetPasswordEmail($email, $username, $token) {
-        $subject = '【' . SITE_NAME . '】重置您的密码';
-        $resetUrl = SITE_URL . '/?reset=' . $token;
+        $siteName = self::getSiteName();
+        $siteUrl = self::getSiteUrl();
+        $subject = '【' . $siteName . '】重置您的密码';
+        $resetUrl = $siteUrl . '/?reset=' . $token;
         
         $body = '
         <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;">
@@ -372,7 +444,7 @@ class Mailer {
                     </ul>
                 </div>
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="' . SITE_URL . '" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">
+                    <a href="' . self::getSiteUrl() . '" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">
                         立即开始使用
                     </a>
                 </div>
