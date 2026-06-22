@@ -207,10 +207,12 @@ session_start();
 $action = $_GET['action'] ?? 'home';
 
 // 处理邮箱验证token
-if ($action == 'verify' && isset($_GET['token'])) {
+// 处理邮箱验证链接（支持 ?verify=xxx 和 ?action=verify&token=xxx 两种格式）
+if (isset($_GET['verify']) || ($action == 'verify' && isset($_GET['token']))) {
     require_once 'api/functions.php';
     
-    $token = $_GET['token'];
+    $token = $_GET['verify'] ?? $_GET['token'];
+    $action = 'verify_result';
     $payload = jwt_decode($token);
     
     if (!$payload || !isset($payload['type']) || $payload['type'] !== 'email_verify') {
@@ -245,8 +247,13 @@ if ($action == 'verify' && isset($_GET['token'])) {
         }
     }
     
-    // 显示验证结果页面
-    $action = 'verify_result';
+    // 验证结果页面在上面已经设置了action
+}
+
+// 处理重置密码链接（支持 ?reset=xxx 格式）
+if (isset($_GET['reset'])) {
+    $reset_token = $_GET['reset'];
+    $action = 'reset_password';
 }
 
 
@@ -386,9 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 // 发送重置密码邮件
                 require_once 'api/mail.php';
-                $mailer = new Mailer();
-                $reset_url = 'http://' . $_SERVER['HTTP_HOST'] . '/index.php?action=reset_password&token=' . $reset_token;
-                $sent = $mailer->sendResetPasswordEmail($email, $user['username'], $reset_url);
+                $sent = Mailer::sendResetPasswordEmail($email, $user['username'], $reset_token);
                 
                 if ($sent) {
                     $success = '重置密码邮件已发送，请查收邮箱';
