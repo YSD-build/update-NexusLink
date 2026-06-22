@@ -6238,3 +6238,179 @@ a:hover {
 .stat-card-enhanced:nth-child(3) { animation-delay: 0.3s; }
 .stat-card-enhanced:nth-child(4) { animation-delay: 0.4s; }
 
+
+/* ============================================
+   移动端性能优化 - 修复组件闪退问题
+   ============================================ */
+
+/* 移动端降低 backdrop-filter 强度，减少性能消耗 */
+@media (max-width: 768px) {
+    .glass-card,
+    .card,
+    .stat-card-enhanced,
+    .tunnel-card-enhanced,
+    .node-card-enhanced,
+    .welcome-banner,
+    .tunnel-stats-bar,
+    .empty-state-enhanced,
+    .node-stat-card {
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* 移动端禁用部分装饰元素，提升性能 */
+    .welcome-decoration,
+    .deco-circle,
+    .empty-icon-large::before {
+        display: none !important;
+    }
+    
+    /* 移动端简化动画 */
+    .stat-card-enhanced,
+    .tunnel-card-enhanced,
+    .node-card-enhanced,
+    .welcome-banner,
+    .empty-state-enhanced {
+        animation: none !important;
+    }
+    
+    /* 移动端禁用悬浮动效，减少重绘 */
+    .stat-card-enhanced:hover,
+    .tunnel-card-enhanced:hover,
+    .node-card-enhanced:hover,
+    .quick-action-item:hover {
+        transform: none !important;
+        box-shadow: var(--glass-shadow) !important;
+    }
+    
+    /* 移动端简化脉冲动画 */
+    .tunnel-status-dot.online,
+    .dot-online {
+        animation: none !important;
+    }
+}
+
+/* 超小屏幕进一步优化 */
+@media (max-width: 480px) {
+    .glass-card,
+    .card,
+    .stat-card-enhanced,
+    .tunnel-card-enhanced,
+    .node-card-enhanced {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+    }
+    
+    /* 小屏幕禁用所有非必要动画 */
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 修复切换按钮点击区域问题 */
+.toggle-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 32px;
+    min-width: 44px;
+}
+
+/* 修复按钮点击反馈 */
+.action-btn,
+.btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* 修复表单提交时的闪烁问题 */
+form {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 确保 SVG 图标在移动端正确显示 */
+svg {
+    flex-shrink: 0;
+}
+
+/* 修复移动端文字溢出问题 */
+.tunnel-name-enhanced,
+.node-name-enhanced,
+.welcome-username {
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+
+/* ============================================
+   额外修复 - 确保稳定性
+   ============================================ */
+
+/* 防止 overflow 导致的闪退 */
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.stat-card-enhanced {
+    overflow: hidden;
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 修复卡片顶部装饰条可能的渲染问题 */
+.tunnel-card-topbar,
+.node-card-decoration {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 确保渐变背景正确渲染 */
+.stat-card-enhanced::before,
+.node-card-decoration {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 修复 SVG 在某些浏览器的渲染问题 */
+.stat-icon svg,
+.quick-action-icon svg,
+.card-title-icon svg,
+.tunnel-node-badge svg,
+.node-icon svg,
+.node-location-badge svg,
+.action-btn svg {
+    display: block;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 确保进度条正确渲染 */
+.progress-bar-mini,
+.progress-fill {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 桌面模式下的移动端优化（用户在手机上用电脑模式访问） */
+@media (max-width: 1024px) and (pointer: coarse) {
+    /* 触控设备降低模糊效果 */
+    .glass-card,
+    .card,
+    .stat-card-enhanced,
+    .tunnel-card-enhanced,
+    .node-card-enhanced {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* 触控设备简化悬浮效果 */
+    .stat-card-enhanced:hover,
+    .tunnel-card-enhanced:hover,
+    .node-card-enhanced:hover {
+        transform: translateY(-2px);
+    }
+}
+
