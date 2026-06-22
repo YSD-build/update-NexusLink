@@ -1113,11 +1113,11 @@ $stats = get_admin_stats();
                 </a>
                 
                 <a href="admin.php?action=login_logs" class="menu-item <?php echo $action == 'login_logs' ? 'active' : ''; ?>">
-                    <span class="menu-icon" style="width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:14px;">📋</span>
+                    <span class="menu-icon icon-logs"></span>
                     <span class="menu-text">登录日志</span>
                 </a>
                 <a href="admin.php?action=operation_logs" class="menu-item <?php echo $action == 'operation_logs' ? 'active' : ''; ?>">
-                    <span class="menu-icon">📋</span>
+                    <span class="menu-icon icon-logs"></span>
                     <span class="menu-text">操作日志</span>
                 </a>
                 
@@ -1125,17 +1125,17 @@ $stats = get_admin_stats();
                 <div class="menu-group">系统管理</div>
                 
                 <a href="admin.php?action=settings" class="menu-item <?php echo $action == 'settings' ? 'active' : ''; ?>">
-                    <span class="menu-icon icon-checkin"></span>
+                    <span class="menu-icon icon-settings"></span>
                     <span class="menu-text">站点设置</span>
                 </a>
                 
                 <a href="admin.php?action=advanced" class="menu-item <?php echo $action == 'advanced' ? 'active' : ''; ?>">
-                    <span class="menu-icon icon-node"></span>
+                    <span class="menu-icon icon-settings"></span>
                     <span class="menu-text">高级设置</span>
                 </a>
                 
                 <a href="admin.php?action=update" class="menu-item <?php echo $action == 'update' ? 'active' : ''; ?>">
-                    <span class="menu-icon icon-dashboard"></span>
+                    <span class="menu-icon icon-update"></span>
                     <span class="menu-text">系统更新</span>
                 </a>
                 
