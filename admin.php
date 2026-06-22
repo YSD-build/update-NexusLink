@@ -1048,6 +1048,7 @@ $stats = get_admin_stats();
                                 <h4>用户注册</h4>
                                 <p>开启后允许新用户注册账号</p>
                             </div>
+                            <input type="hidden" name="register_enabled" value="0">
                             <label class="switch <?php echo ($settings['register_enabled'] ?? '1') == '1' ? 'active' : ''; ?>">
                                 <input type="checkbox" name="register_enabled" value="1" <?php echo ($settings['register_enabled'] ?? '1') == '1' ? 'checked' : ''; ?> style="display:none;">
                             </label>
@@ -1058,6 +1059,7 @@ $stats = get_admin_stats();
                                 <h4>邮箱验证</h4>
                                 <p>注册时需要验证邮箱才能使用</p>
                             </div>
+                            <input type="hidden" name="email_verify_required" value="0">
                             <label class="switch <?php echo ($settings['email_verify_required'] ?? '0') == '1' ? 'active' : ''; ?>">
                                 <input type="checkbox" name="email_verify_required" value="1" <?php echo ($settings['email_verify_required'] ?? '0') == '1' ? 'checked' : ''; ?> style="display:none;">
                             </label>
@@ -1176,6 +1178,7 @@ $stats = get_admin_stats();
                                 <h4>启用邮件服务</h4>
                                 <p>开启后可以发送验证邮件、通知邮件等</p>
                             </div>
+                            <input type="hidden" name="mail_enabled" value="0">
                             <label class="switch <?php echo ($settings['mail_enabled'] ?? '0') == '1' ? 'active' : ''; ?>">
                                 <input type="checkbox" name="mail_enabled" value="1" <?php echo ($settings['mail_enabled'] ?? '0') == '1' ? 'checked' : ''; ?> style="display:none;">
                             </label>
@@ -1425,16 +1428,20 @@ document.addEventListener('DOMContentLoaded', function() {
     switches.forEach(function(sw) {
         var checkbox = sw.querySelector('input[type="checkbox"]');
         if (checkbox) {
-            sw.addEventListener('click', function(e) {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    if (checkbox.checked) {
-                        sw.classList.add('active');
-                    } else {
-                        sw.classList.remove('active');
-                    }
+            // 监听checkbox的change事件
+            checkbox.addEventListener('change', function() {
+                if (checkbox.checked) {
+                    sw.classList.add('active');
+                } else {
+                    sw.classList.remove('active');
                 }
             });
+            // 初始化状态
+            if (checkbox.checked) {
+                sw.classList.add('active');
+            } else {
+                sw.classList.remove('active');
+            }
         }
     });
 });
