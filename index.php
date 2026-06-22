@@ -3150,15 +3150,15 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                             <div class="contact-info">
                                 <div class="contact-item">
                                     <span class="contact-label">官方网站</span>
+                                    <span class="contact-value">51.tokenr.cn</span>
+                                </div>
+                                <div class="contact-item">
+                                    <span class="contact-label">联系邮箱</span>
+                                    <span class="contact-value">postmaster@tokenr.cn</span>
+                                </div>
+                                <div class="contact-item">
+                                    <span class="contact-label">品牌域名</span>
                                     <span class="contact-value">内网穿透.中国</span>
-                                </div>
-                                <div class="contact-item">
-                                    <span class="contact-label">技术支持</span>
-                                    <span class="contact-value">support@nexuslink.cn</span>
-                                </div>
-                                <div class="contact-item">
-                                    <span class="contact-label">商务合作</span>
-                                    <span class="contact-value">business@nexuslink.cn</span>
                                 </div>
                             </div>
                         </div>
