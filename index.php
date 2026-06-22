@@ -2781,6 +2781,96 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 个性化设置 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon section-icon-palette"></span>
+                                个性化设置
+                                <span class="section-badge section-badge-new">新</span>
+                            </div>
+                            <div class="function-grid">
+                                <div class="function-card" onclick="toggleTheme()">
+                                    <div class="function-icon theme-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">主题切换</div>
+                                        <div class="function-desc">浅色 / 深色模式自由切换</div>
+                                    </div>
+                                    <div class="function-arrow">
+                                        <span class="theme-toggle-switch">
+                                            <span class="theme-toggle-slider"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <a href="index.php?action=profile_settings" class="function-card">
+                                    <div class="function-icon profile-settings-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">个人资料</div>
+                                        <div class="function-desc">编辑昵称、个人简介等信息</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=preferences" class="function-card">
+                                    <div class="function-icon preference-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">偏好设置</div>
+                                        <div class="function-desc">自定义显示和通知偏好</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                                <a href="index.php?action=api_keys" class="function-card">
+                                    <div class="function-icon api-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">API 密钥</div>
+                                        <div class="function-desc">管理 API 访问密钥和权限</div>
+                                    </div>
+                                    <div class="function-arrow">→</div>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- 更多功能预告 -->
+                        <div class="function-section">
+                            <div class="section-title">
+                                <span class="section-icon section-icon-star"></span>
+                                更多功能
+                                <span class="section-badge section-badge-soon">即将上线</span>
+                            </div>
+                            <div class="function-grid">
+                                <div class="function-card function-card-disabled">
+                                    <div class="function-icon group-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">隧道分组</div>
+                                        <div class="function-desc">自定义分组管理隧道</div>
+                                    </div>
+                                    <div class="function-arrow badge-soon">敬请期待</div>
+                                </div>
+                                <div class="function-card function-card-disabled">
+                                    <div class="function-icon monitor-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">流量监控</div>
+                                        <div class="function-desc">实时监控隧道流量状态</div>
+                                    </div>
+                                    <div class="function-arrow badge-soon">敬请期待</div>
+                                </div>
+                                <div class="function-card function-card-disabled">
+                                    <div class="function-icon webhook-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">Webhook</div>
+                                        <div class="function-desc">事件回调通知集成</div>
+                                    </div>
+                                    <div class="function-arrow badge-soon">敬请期待</div>
+                                </div>
+                                <div class="function-card function-card-disabled">
+                                    <div class="function-icon share-icon"></div>
+                                    <div class="function-info">
+                                        <div class="function-name">邀请好友</div>
+                                        <div class="function-desc">邀请好友获得额外流量</div>
+                                    </div>
+                                    <div class="function-arrow badge-soon">敬请期待</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2832,40 +2922,252 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
             <?php elseif ($action == 'about'): ?>
                 <!-- 关于我们 -->
-                <div class="card" style="max-width:700px;">
-                    <div class="card-title">关于 NexusLink</div>
-                    
-                    <div style="text-align:center; padding:30px 0;">
-                        <div style="width:80px; height:80px; background:linear-gradient(135deg, #2080f0 0%, #722ed1 100%); border-radius:20px; margin:0 auto 20px; position:relative;">
-                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:30px; height:30px; border:4px solid #fff; border-radius:6px;"></div>
-                        </div>
-                        <h2 style="font-size:28px; font-weight:700; color:#1d2129; margin-bottom:10px;">NexusLink</h2>
-                        <p style="color:#86909c; font-size:16px;">高性能内网穿透平台</p>
-                    </div>
-                    
-                    <div style="color:#4e5969; line-height:2; margin-bottom:30px;">
-                        <p>NexusLink 是一个专注于内网穿透的服务平台，致力于为用户提供安全、稳定、高速的内网穿透解决方案。</p>
-                        <p>我们采用自主研发的高性能转发引擎，相比传统方案，转发损耗更低，速度更快。支持 TCP、UDP 等多种协议，满足不同场景的需求。</p>
-                    </div>
-                    
-                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; margin-bottom:30px;">
-                        <div style="text-align:center; padding:20px; background:#f5f7fa; border-radius:12px;">
-                            <div style="font-size:32px; font-weight:700; color:#2080f0; margin-bottom:5px;">0.3%</div>
-                            <div style="font-size:13px; color:#86909c;">转发损耗</div>
-                        </div>
-                        <div style="text-align:center; padding:20px; background:#f5f7fa; border-radius:12px;">
-                            <div style="font-size:32px; font-weight:700; color:#18a058; margin-bottom:5px;">10x</div>
-                            <div style="font-size:13px; color:#86909c;">性能提升</div>
-                        </div>
-                        <div style="text-align:center; padding:20px; background:#f5f7fa; border-radius:12px;">
-                            <div style="font-size:32px; font-weight:700; color:#f0a020; margin-bottom:5px;">99.9%</div>
-                            <div style="font-size:13px; color:#86909c;">可用性</div>
+                <div class="about-page">
+                    <!-- Hero 区域 -->
+                    <div class="about-hero">
+                        <div class="about-hero-bg"></div>
+                        <div class="about-hero-content">
+                            <div class="about-logo">
+                                <span class="logo-icon-large"></span>
+                            </div>
+                            <h1 class="about-title">NexusLink</h1>
+                            <p class="about-subtitle">连接无限可能 · 高性能内网穿透平台</p>
+                            <div class="about-brand-tags">
+                                <span class="brand-tag">半公益</span>
+                                <span class="brand-tag">开源技术</span>
+                                <span class="brand-tag">自主研发</span>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div style="border-top:1px solid #f2f3f5; padding-top:20px; text-align:center; color:#86909c; font-size:13px;">
-                        <p>版本：v0.2.2.beta</p>
-                        <p style="margin-top:5px;">© 2026 NexusLink. All rights reserved.</p>
+
+                    <!-- 我们的使命 -->
+                    <div class="about-section">
+                        <div class="section-header">
+                            <h2 class="section-title">我们的使命</h2>
+                            <p class="section-desc">让每一个内网服务都能被安全、稳定地访问</p>
+                        </div>
+                        <div class="mission-cards">
+                            <div class="mission-card">
+                                <div class="mission-icon mission-icon-1"></div>
+                                <h3>降低技术门槛</h3>
+                                <p>让普通用户也能轻松搭建内网穿透，无需复杂的网络知识和服务器配置</p>
+                            </div>
+                            <div class="mission-card">
+                                <div class="mission-icon mission-icon-2"></div>
+                                <h3>半公益运营</h3>
+                                <p>坚持半公益理念，提供基础免费额度，让更多人享受到技术带来的便利</p>
+                            </div>
+                            <div class="mission-card">
+                                <div class="mission-icon mission-icon-3"></div>
+                                <h3>技术自主可控</h3>
+                                <p>自主研发高性能转发引擎，核心技术完全自主可控，安全可靠</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 核心数据 -->
+                    <div class="about-section about-stats-section">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-number">0.3%</div>
+                                <div class="stat-label">超低转发损耗</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">99.9%</div>
+                                <div class="stat-label">服务可用性</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">10x</div>
+                                <div class="stat-label">性能提升</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">7×24</div>
+                                <div class="stat-label">全天候服务</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 核心优势 -->
+                    <div class="about-section">
+                        <div class="section-header">
+                            <h2 class="section-title">为什么选择 NexusLink</h2>
+                            <p class="section-desc">专业级内网穿透解决方案</p>
+                        </div>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-speed"></div>
+                                <h3>极速转发</h3>
+                                <p>自主研发高性能转发引擎，超低延迟，无损转发，让你的服务飞起来</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-security"></div>
+                                <h3>安全可靠</h3>
+                                <p>多层安全防护，数据加密传输，完整的审计日志系统，保障你的数据安全</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-stable"></div>
+                                <h3>稳定运行</h3>
+                                <p>多节点容灾备份，智能负载均衡，99.9%可用性承诺，服务永不掉线</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-easy"></div>
+                                <h3>简单易用</h3>
+                                <p>可视化管理面板，一键创建隧道，零配置启动，新手也能快速上手</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-protocol"></div>
+                                <h3>多协议支持</h3>
+                                <p>支持 TCP、UDP、HTTP、HTTPS 等多种协议，满足各种场景需求</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon feature-icon-free"></div>
+                                <h3>半公益免费</h3>
+                                <p>基础功能永久免费，每日签到领取流量，让每个人都能用得起</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 半公益理念 -->
+                    <div class="about-section about-welfare">
+                        <div class="welfare-card">
+                            <div class="welfare-icon">❤</div>
+                            <h2>半公益运营理念</h2>
+                            <p class="welfare-desc">
+                                我们相信技术应该服务于人，而不是成为盈利的工具。<br>
+                                NexusLink 坚持半公益运营模式，基础功能永久免费，<br>
+                                通过付费用户的支持来维持平台的运营和发展。
+                            </p>
+                            <div class="welfare-features">
+                                <div class="welfare-item">
+                                    <span class="welfare-check">✓</span>
+                                    <span>注册即送基础流量</span>
+                                </div>
+                                <div class="welfare-item">
+                                    <span class="welfare-check">✓</span>
+                                    <span>每日签到免费领取流量</span>
+                                </div>
+                                <div class="welfare-item">
+                                    <span class="welfare-check">✓</span>
+                                    <span>所有核心功能免费开放</span>
+                                </div>
+                                <div class="welfare-item">
+                                    <span class="welfare-check">✓</span>
+                                    <span>无广告、无捆绑、无套路</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 技术实力 -->
+                    <div class="about-section">
+                        <div class="section-header">
+                            <h2 class="section-title">技术实力</h2>
+                            <p class="section-desc">自主研发，技术可控</p>
+                        </div>
+                        <div class="tech-stack">
+                            <div class="tech-item">
+                                <div class="tech-name">C 语言引擎</div>
+                                <div class="tech-desc">核心转发引擎纯 C 语言实现，性能极致</div>
+                            </div>
+                            <div class="tech-item">
+                                <div class="tech-name">PHP + MySQL</div>
+                                <div class="tech-desc">稳定可靠的 Web 平台技术栈</div>
+                            </div>
+                            <div class="tech-item">
+                                <div class="tech-name">事件驱动</div>
+                                <div class="tech-desc">epoll 异步 IO 模型，高并发支持</div>
+                            </div>
+                            <div class="tech-item">
+                                <div class="tech-name">安全加密</div>
+                                <div class="tech-desc">AES-256 加密，JWT 认证，多层防护</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 发展历程 -->
+                    <div class="about-section">
+                        <div class="section-header">
+                            <h2 class="section-title">发展历程</h2>
+                            <p class="section-desc">持续迭代，不断进步</p>
+                        </div>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.06</div>
+                                    <div class="timeline-title">v0.6 安全增强</div>
+                                    <div class="timeline-desc">登录安全防护、操作日志审计、CSRF/XSS 防护</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.06</div>
+                                    <div class="timeline-title">v0.5 全面优化</div>
+                                    <div class="timeline-desc">用户端 UI 全面升级，性能深度优化</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.06</div>
+                                    <div class="timeline-title">v0.4 功能完善</div>
+                                    <div class="timeline-desc">签到系统、API 密钥、个人中心等功能上线</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.06</div>
+                                    <div class="timeline-title">v0.3 多用户平台</div>
+                                    <div class="timeline-desc">PHP + MySQL 多用户管理平台上线</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.05</div>
+                                    <div class="timeline-title">v0.2 Go 语言版本</div>
+                                    <div class="timeline-desc">Go 语言重写，性能大幅提升</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-dot timeline-dot-first"></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-date">2026.04</div>
+                                    <div class="timeline-title">项目启动</div>
+                                    <div class="timeline-desc">NexusLink 项目正式启动，开始研发</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 联系我们 -->
+                    <div class="about-section about-contact">
+                        <div class="contact-card">
+                            <h2>联系我们</h2>
+                            <p class="contact-desc">有任何问题或建议，欢迎联系我们</p>
+                            <div class="contact-info">
+                                <div class="contact-item">
+                                    <span class="contact-label">官方网站</span>
+                                    <span class="contact-value">内网穿透.中国</span>
+                                </div>
+                                <div class="contact-item">
+                                    <span class="contact-label">技术支持</span>
+                                    <span class="contact-value">support@nexuslink.cn</span>
+                                </div>
+                                <div class="contact-item">
+                                    <span class="contact-label">商务合作</span>
+                                    <span class="contact-value">business@nexuslink.cn</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部版权 -->
+                    <div class="about-footer">
+                        <p>© 2026 NexusLink 内网穿透平台 · 内网穿透.中国</p>
+                        <p class="footer-version">当前版本：<?php echo CURRENT_VERSION; ?></p>
                     </div>
                 </div>
 
@@ -2906,6 +3208,37 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
         setTimeout(function() { toast.classList.add("show"); }, 10);
         setTimeout(function() { toast.classList.remove("show"); }, 2500);
     }
+
+    // 主题切换功能
+    function toggleTheme() {
+        var body = document.body;
+        var isDark = body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // 更新所有主题切换开关的状态
+        var switches = document.querySelectorAll('.theme-toggle-switch');
+        switches.forEach(function(sw) {
+            if (isDark) {
+                sw.classList.add('active');
+            } else {
+                sw.classList.remove('active');
+            }
+        });
+        
+        showToast(isDark ? '已切换到深色模式' : '已切换到浅色模式', 'success');
+    }
+
+    // 页面加载时应用保存的主题
+    document.addEventListener('DOMContentLoaded', function() {
+        var savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            var switches = document.querySelectorAll('.theme-toggle-switch');
+            switches.forEach(function(sw) {
+                sw.classList.add('active');
+            });
+        }
+    });
     </script>
 </body>
 </html>

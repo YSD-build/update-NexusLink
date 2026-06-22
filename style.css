@@ -7484,3 +7484,865 @@ img {
     line-height: 1.6;
 }
 
+
+/* ==================== 关于我们页面 ==================== */
+
+.about-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+}
+
+/* Hero 区域 */
+.about-hero {
+    position: relative;
+    text-align: center;
+    padding: 80px 40px 60px;
+    margin-bottom: 40px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.about-hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.about-hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.about-logo {
+    margin-bottom: 24px;
+}
+
+.logo-icon-large {
+    display: inline-block;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.logo-icon-large::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    border: 4px solid white;
+    border-radius: 8px;
+}
+
+.logo-icon-large::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+}
+
+.about-title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 12px;
+    letter-spacing: -1px;
+}
+
+.about-subtitle {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 24px;
+    font-weight: 400;
+}
+
+.about-brand-tags {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.brand-tag {
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    font-size: 13px;
+    color: white;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 通用区块 */
+.about-section {
+    margin-bottom: 60px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1d2129;
+    margin-bottom: 12px;
+}
+
+.section-desc {
+    font-size: 15px;
+    color: #86909c;
+}
+
+/* 使命卡片 */
+.mission-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.mission-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.mission-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+}
+
+.mission-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 16px;
+    position: relative;
+}
+
+.mission-icon-1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.mission-icon-1::before {
+    content: '↓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.mission-icon-2 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.mission-icon-2::before {
+    content: '❤';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+}
+
+.mission-icon-3 {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.mission-icon-3::before {
+    content: '⚡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+}
+
+.mission-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2129;
+    margin-bottom: 12px;
+}
+
+.mission-card p {
+    font-size: 14px;
+    color: #86909c;
+    line-height: 1.7;
+}
+
+/* 统计数据 */
+.about-stats-section {
+    background: linear-gradient(135deg, #1d2129 0%, #2a2f3a 100%);
+    border-radius: 24px;
+    padding: 48px 40px;
+}
+
+.about-stats-section .section-title {
+    color: white;
+}
+
+.about-stats-section .section-desc {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 42px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* 特性网格 */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 28px 24px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.feature-icon-speed {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.feature-icon-speed::before {
+    content: '⚡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+}
+
+.feature-icon-security {
+    background: linear-gradient(135deg, #00b42a 0%, #00b96b 100%);
+}
+
+.feature-icon-security::before {
+    content: '🛡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+}
+
+.feature-icon-stable {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+}
+
+.feature-icon-stable::before {
+    content: '◈';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+}
+
+.feature-icon-easy {
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+}
+
+.feature-icon-easy::before {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.feature-icon-protocol {
+    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+}
+
+.feature-icon-protocol::before {
+    content: '⇄';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+}
+
+.feature-icon-free {
+    background: linear-gradient(135deg, #f53f3f 0%, #ff7d7d 100%);
+}
+
+.feature-icon-free::before {
+    content: '🎁';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 20px;
+}
+
+.feature-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2129;
+    margin-bottom: 8px;
+}
+
+.feature-card p {
+    font-size: 13px;
+    color: #86909c;
+    line-height: 1.7;
+}
+
+/* 半公益理念 */
+.about-welfare {
+    text-align: center;
+}
+
+.welfare-card {
+    background: linear-gradient(135deg, #fff1f0 0%, #ffe7e6 100%);
+    border-radius: 24px;
+    padding: 48px 40px;
+    border: 1px solid rgba(245, 63, 63, 0.1);
+}
+
+.welfare-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: heartbeat 2s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.welfare-card h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1d2129;
+    margin-bottom: 16px;
+}
+
+.welfare-desc {
+    font-size: 15px;
+    color: #4e5969;
+    line-height: 2;
+    margin-bottom: 32px;
+}
+
+.welfare-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.welfare-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #4e5969;
+}
+
+.welfare-check {
+    width: 20px;
+    height: 20px;
+    background: #00b42a;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* 技术栈 */
+.tech-stack {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.tech-item {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tech-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2129;
+}
+
+.tech-desc {
+    font-size: 13px;
+    color: #86909c;
+}
+
+/* 时间线 */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #667eea, #764ba2, transparent);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 32px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -33px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    background: #667eea;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.timeline-dot-first {
+    background: #00b42a;
+    box-shadow: 0 0 0 2px #00b42a;
+}
+
+.timeline-content {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px 24px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.timeline-date {
+    font-size: 13px;
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.timeline-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2129;
+    margin-bottom: 6px;
+}
+
+.timeline-desc {
+    font-size: 13px;
+    color: #86909c;
+}
+
+/* 联系我们 */
+.about-contact {
+    text-align: center;
+}
+
+.contact-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 48px 40px;
+    color: white;
+}
+
+.contact-card h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.contact-desc {
+    font-size: 15px;
+    opacity: 0.9;
+    margin-bottom: 32px;
+}
+
+.contact-info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.contact-item {
+    text-align: center;
+}
+
+.contact-label {
+    display: block;
+    font-size: 13px;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.contact-value {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* 底部 */
+.about-footer {
+    text-align: center;
+    padding-top: 40px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    color: #86909c;
+    font-size: 14px;
+}
+
+.footer-version {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .about-hero {
+        padding: 60px 24px 40px;
+    }
+    
+    .about-title {
+        font-size: 32px;
+    }
+    
+    .mission-cards,
+    .features-grid,
+    .tech-stack,
+    .contact-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .welfare-features {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ==================== 个性化设置样式 ==================== */
+
+/* 新区块图标 */
+.section-icon-palette {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.section-icon-palette::before {
+    content: '🎨';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+}
+
+.section-icon-star {
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+}
+
+.section-icon-star::before {
+    content: '⭐';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+}
+
+/* 新区块徽章 */
+.section-badge-new {
+    background: linear-gradient(135deg, #00b42a 0%, #00b96b 100%);
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.section-badge-soon {
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* 新功能图标 */
+.theme-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+}
+
+.theme-icon::before {
+    content: '🌓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.profile-settings-icon {
+    background: linear-gradient(135deg, #00b42a 0%, #00b96b 100%);
+    position: relative;
+}
+
+.profile-settings-icon::before {
+    content: '👤';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.preference-icon {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+    position: relative;
+}
+
+.preference-icon::before {
+    content: '⚙';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.group-icon {
+    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+    position: relative;
+}
+
+.group-icon::before {
+    content: '📁';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.monitor-icon {
+    background: linear-gradient(135deg, #00b42a 0%, #00b96b 100%);
+    position: relative;
+}
+
+.monitor-icon::before {
+    content: '📊';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.webhook-icon {
+    background: linear-gradient(135deg, #f53f3f 0%, #ff7d7d 100%);
+    position: relative;
+}
+
+.webhook-icon::before {
+    content: '🔗';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+.share-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    position: relative;
+}
+
+.share-icon::before {
+    content: '🎁';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+/* 主题切换开关 */
+.theme-toggle-switch {
+    width: 44px;
+    height: 24px;
+    background: #e5e6eb;
+    border-radius: 12px;
+    position: relative;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle-switch.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.theme-toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle-switch.active .theme-toggle-slider {
+    left: 22px;
+}
+
+/* 禁用卡片样式 */
+.function-card-disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.function-card-disabled:hover {
+    transform: none !important;
+    border-color: rgba(0, 0, 0, 0.06) !important;
+    box-shadow: none !important;
+}
+
+.badge-soon {
+    font-size: 11px;
+    color: #ff7d00;
+    font-weight: 500;
+    background: #fff7e8;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* 深色模式变量 */
+body.dark-mode {
+    --bg-color: #1d2129;
+    --card-bg: rgba(42, 47, 58, 0.8);
+    --text-primary: #f7f8fa;
+    --text-secondary: #c9cdd4;
+    --border-color: rgba(255, 255, 255, 0.1);
+    background: #1d2129;
+}
+
+body.dark-mode .card,
+body.dark-mode .user-header-card,
+body.dark-mode .traffic-overview-card,
+body.dark-mode .function-card {
+    background: rgba(42, 47, 58, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .card-title,
+body.dark-mode .user-name,
+body.dark-mode .function-name,
+body.dark-mode .section-title {
+    color: #f7f8fa;
+}
+
+body.dark-mode .function-desc,
+body.dark-mode .meta-label,
+body.dark-mode .stat-label {
+    color: #86909c;
+}
+
