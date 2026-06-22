@@ -7,6 +7,58 @@
 class Mailer {
     
     /**
+     * 获取邮件配置
+     * 优先从数据库设置表读取，其次使用常量
+     * @return array
+     */
+    private static function getConfig() {
+        static $config = null;
+        if ($config !== null) {
+            return $config;
+        }
+        
+        $config = [
+            'enabled' => MAIL_ENABLE,
+            'host' => MAIL_HOST,
+            'port' => MAIL_PORT,
+            'user' => MAIL_USER,
+            'pass' => MAIL_PASS,
+            'from' => MAIL_FROM,
+            'from_name' => MAIL_FROM_NAME,
+            'secure' => MAIL_SECURE,
+        ];
+        
+        // 尝试从数据库读取设置
+        try {
+            if (class_exists('Database')) {
+                $db = Database::getInstance()->getPdo();
+                $prefix = TABLE_PREFIX;
+                
+                $stmt = $db->query("SELECT setting_key, setting_value FROM {$prefix}settings WHERE setting_key LIKE 'mail_%'");
+                $settings = [];
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $settings[$row['setting_key']] = $row['setting_value'];
+                }
+                
+                if (!empty($settings)) {
+                    $config['enabled'] = ($settings['mail_enabled'] ?? '0') == '1';
+                    if (!empty($settings['mail_host'])) $config['host'] = $settings['mail_host'];
+                    if (!empty($settings['mail_port'])) $config['port'] = intval($settings['mail_port']);
+                    if (!empty($settings['mail_user'])) $config['user'] = $settings['mail_user'];
+                    if (!empty($settings['mail_pass'])) $config['pass'] = $settings['mail_pass'];
+                    if (!empty($settings['mail_from'])) $config['from'] = $settings['mail_from'];
+                    if (!empty($settings['mail_from_name'])) $config['from_name'] = $settings['mail_from_name'];
+                    if (isset($settings['mail_secure'])) $config['secure'] = $settings['mail_secure'];
+                }
+            }
+        } catch (Exception $e) {
+            // 数据库读取失败，使用默认配置
+        }
+        
+        return $config;
+    }
+    
+    /**
      * 发送邮件
      * @param string $to 收件人邮箱
      * @param string $subject 邮件主题
@@ -14,13 +66,15 @@ class Mailer {
      * @return bool 是否发送成功
      */
     public static function send($to, $subject, $body) {
+        $config = self::getConfig();
+        
         // 如果未启用邮件功能，直接返回成功（模拟发送）
-        if (!MAIL_ENABLE) {
+        if (!$config['enabled']) {
             return true;
         }
         
         // 优先使用SMTP
-        if (MAIL_HOST && MAIL_USER && MAIL_PASS) {
+        if ($config['host'] && $config['user'] && $config['pass']) {
             return self::sendSMTP($to, $subject, $body);
         }
         
@@ -32,10 +86,12 @@ class Mailer {
      * 使用mail()函数发送
      */
     private static function sendMail($to, $subject, $body) {
+        $config = self::getConfig();
+        
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-type: text/html; charset=utf-8\r\n";
-        $headers .= "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM . ">\r\n";
-        $headers .= "Reply-To: " . MAIL_FROM . "\r\n";
+        $headers .= "From: " . $config['from_name'] . " <" . $config['from'] . ">\r\n";
+        $headers .= "Reply-To: " . $config['from'] . "\r\n";
         $headers .= "X-Mailer: PHP/" . phpversion();
         
         return mail($to, $subject, $body, $headers);
@@ -45,13 +101,14 @@ class Mailer {
      * 使用SMTP发送邮件
      */
     private static function sendSMTP($to, $subject, $body) {
-        $host = MAIL_HOST;
-        $port = MAIL_PORT;
-        $user = MAIL_USER;
-        $pass = MAIL_PASS;
-        $from = MAIL_FROM;
-        $fromName = MAIL_FROM_NAME;
-        $secure = MAIL_SECURE;
+        $config = self::getConfig();
+        $host = $config['host'];
+        $port = $config['port'];
+        $user = $config['user'];
+        $pass = $config['pass'];
+        $from = $config['from'];
+        $fromName = $config['from_name'];
+        $secure = $config['secure'];
         
         // 构建邮件内容
         $boundary = md5(time());

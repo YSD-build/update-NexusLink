@@ -4,6 +4,6 @@
  * 这个文件会随更新自动覆盖，请勿修改
  */
 
-define('CURRENT_VERSION', 'v0.4.6');
-define('VERSION_CODE', 2026062210);
+define('CURRENT_VERSION', 'v0.4.7');
+define('VERSION_CODE', 2026062211);
 define('VERSION_DATE', '2026-06-22');

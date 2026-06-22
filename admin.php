@@ -246,6 +246,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     $settings_saved = true;
 }
 
+// 处理测试邮件
+$test_email_result = null;
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_email']) && $current_user && $current_user['role'] == 'admin') {
+    $test_to = trim($_POST['test_email_to'] ?? '');
+    
+    if (!$test_to) {
+        $test_email_result = ['success' => false, 'message' => '请输入测试邮箱地址'];
+    } elseif (!filter_var($test_to, FILTER_VALIDATE_EMAIL)) {
+        $test_email_result = ['success' => false, 'message' => '邮箱格式不正确'];
+    } else {
+        // 引入邮件类
+        require_once __DIR__ . '/api/mail.php';
+        
+        $subject = '【' . ($settings['site_name'] ?? 'NexusLink') . '】邮件测试';
+        $body = '<div style="padding: 20px; font-family: sans-serif;">
+            <h2>🎉 邮件发送成功！</h2>
+            <p>恭喜您，NexusLink 邮件服务配置正确！</p>
+            <p>这是一封测试邮件，用于验证您的 SMTP 配置是否正常工作。</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                发送时间：' . date('Y-m-d H:i:s') . '<br>
+                收件人：' . htmlspecialchars($test_to) . '
+            </p>
+        </div>';
+        
+        $result = Mailer::send($test_to, $subject, $body);
+        if ($result) {
+            $test_email_result = ['success' => true, 'message' => '测试邮件已发送成功，请查收！'];
+        } else {
+            $test_email_result = ['success' => false, 'message' => '邮件发送失败，请检查配置是否正确'];
+        }
+    }
+}
+
 
 // 处理重新生成JWT密钥
 $jwt_result = null;
@@ -1246,6 +1279,32 @@ $stats = get_admin_stats();
                         
                         <div style="margin-top:24px; text-align:right;">
                             <button type="submit" class="btn btn-primary">保存配置</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 测试邮件 -->
+                <div class="card" style="max-width:800px; margin-top:20px;">
+                    <div class="card-title">测试邮件</div>
+                    
+                    <?php if ($test_email_result): ?>
+                        <div class="alert <?php echo $test_email_result['success'] ? 'alert-success' : 'alert-error'; ?>">
+                            <?php echo htmlspecialchars($test_email_result['message']); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <form method="post" action="">
+                        <input type="hidden" name="test_email" value="1">
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>测试邮箱地址</h4>
+                                <p>输入您的邮箱，发送一封测试邮件验证配置</p>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="email" name="test_email_to" class="form-input" style="width:250px;" placeholder="test@example.com" value="<?php echo htmlspecialchars($current_user['email'] ?? ''); ?>">
+                                <button type="submit" class="btn btn-primary">发送测试</button>
+                            </div>
                         </div>
                     </form>
                 </div>
