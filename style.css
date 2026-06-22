@@ -8346,3 +8346,293 @@ body.dark-mode .stat-label {
     color: #86909c;
 }
 
+
+/* ==================== 关于我们页面（简约风格） ==================== */
+
+.about-page {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* 页面标题 */
+.page-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1d2129;
+    margin-bottom: 8px;
+}
+
+.page-desc {
+    font-size: 14px;
+    color: #86909c;
+}
+
+/* 介绍文本 */
+.about-text {
+    color: #4e5969;
+    line-height: 1.8;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.about-text:last-child {
+    margin-bottom: 0;
+}
+
+/* 核心数据 */
+.about-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.about-stat-item {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.about-stat-num {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2080f0;
+    margin-bottom: 4px;
+}
+
+.about-stat-label {
+    font-size: 12px;
+    color: #86909c;
+}
+
+/* 核心优势 */
+.about-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.about-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: #f7f8fa;
+    border-radius: 10px;
+}
+
+.about-feature-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.icon-speed {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.icon-speed::before {
+    content: '⚡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+}
+
+.icon-security {
+    background: linear-gradient(135deg, #00b42a 0%, #00b96b 100%);
+}
+
+.icon-security::before {
+    content: '🛡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+}
+
+.icon-stable {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+}
+
+.icon-stable::before {
+    content: '◈';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.icon-easy {
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+}
+
+.icon-easy::before {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.icon-protocol {
+    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+}
+
+.icon-protocol::before {
+    content: '⇄';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+}
+
+.icon-free {
+    background: linear-gradient(135deg, #f53f3f 0%, #ff7d7d 100%);
+}
+
+.icon-free::before {
+    content: '🎁';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+}
+
+.about-feature-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2129;
+    margin-bottom: 4px;
+}
+
+.about-feature-desc {
+    font-size: 12px;
+    color: #86909c;
+    line-height: 1.5;
+}
+
+/* 半公益列表 */
+.about-welfare-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.about-welfare-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #4e5969;
+}
+
+.welfare-check {
+    width: 18px;
+    height: 18px;
+    background: #00b42a;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* 技术实力 */
+.about-tech-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.about-tech-item {
+    padding: 16px;
+    background: #f7f8fa;
+    border-radius: 10px;
+}
+
+.about-tech-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2129;
+    margin-bottom: 4px;
+}
+
+.about-tech-desc {
+    font-size: 12px;
+    color: #86909c;
+}
+
+/* 联系我们 */
+.about-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.about-contact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f7f8fa;
+    border-radius: 10px;
+}
+
+.about-contact-label {
+    font-size: 13px;
+    color: #86909c;
+}
+
+.about-contact-value {
+    font-size: 13px;
+    color: #1d2129;
+    font-weight: 500;
+}
+
+/* 版本信息 */
+.about-version-info {
+    text-align: center;
+    padding: 24px 0;
+    color: #86909c;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .about-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .about-features,
+    .about-welfare-list,
+    .about-tech-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

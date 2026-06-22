@@ -2923,134 +2923,119 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
             <?php elseif ($action == 'about'): ?>
                 <!-- 关于我们 -->
                 <div class="about-page">
-                    <!-- Hero 区域 -->
-                    <div class="about-hero">
-                        <div class="about-hero-bg"></div>
-                        <div class="about-hero-content">
-                            <div class="about-logo">
-                                <span class="logo-icon-large"></span>
-                            </div>
-                            <h1 class="about-title">NexusLink</h1>
-                            <p class="about-subtitle">连接无限可能 · 高性能内网穿透平台</p>
-                            <div class="about-brand-tags">
-                                <span class="brand-tag">半公益</span>
-                                <span class="brand-tag">开源技术</span>
-                                <span class="brand-tag">自主研发</span>
-                            </div>
-                        </div>
+                    <!-- 页面标题 -->
+                    <div class="page-header">
+                        <h1 class="page-title">关于 NexusLink</h1>
+                        <p class="page-desc">高性能内网穿透平台，连接无限可能</p>
                     </div>
 
-                    <!-- 我们的使命 -->
-                    <div class="about-section">
-                        <div class="section-header">
-                            <h2 class="section-title">我们的使命</h2>
-                            <p class="section-desc">让每一个内网服务都能被安全、稳定地访问</p>
-                        </div>
-                        <div class="mission-cards">
-                            <div class="mission-card">
-                                <div class="mission-icon mission-icon-1"></div>
-                                <h3>降低技术门槛</h3>
-                                <p>让普通用户也能轻松搭建内网穿透，无需复杂的网络知识和服务器配置</p>
-                            </div>
-                            <div class="mission-card">
-                                <div class="mission-icon mission-icon-2"></div>
-                                <h3>半公益运营</h3>
-                                <p>坚持半公益理念，提供基础免费额度，让更多人享受到技术带来的便利</p>
-                            </div>
-                            <div class="mission-card">
-                                <div class="mission-icon mission-icon-3"></div>
-                                <h3>技术自主可控</h3>
-                                <p>自主研发高性能转发引擎，核心技术完全自主可控，安全可靠</p>
-                            </div>
+                    <!-- 平台介绍 -->
+                    <div class="card">
+                        <div class="card-title">平台介绍</div>
+                        <div class="card-body">
+                            <p class="about-text">
+                                NexusLink 是一个专注于内网穿透的服务平台，致力于为用户提供安全、稳定、高速的内网穿透解决方案。
+                                我们采用自主研发的高性能转发引擎，相比传统方案，转发损耗更低，速度更快。
+                                支持 TCP、UDP 等多种协议，满足不同场景的需求。
+                            </p>
+                            <p class="about-text">
+                                我们坚持半公益运营理念，基础功能永久免费，通过付费用户的支持来维持平台的运营和发展，
+                                让更多人能够享受到技术带来的便利。
+                            </p>
                         </div>
                     </div>
 
                     <!-- 核心数据 -->
-                    <div class="about-section about-stats-section">
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <div class="stat-number">0.3%</div>
-                                <div class="stat-label">超低转发损耗</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-number">99.9%</div>
-                                <div class="stat-label">服务可用性</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-number">10x</div>
-                                <div class="stat-label">性能提升</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-number">7×24</div>
-                                <div class="stat-label">全天候服务</div>
-                            </div>
+                    <div class="about-stats">
+                        <div class="about-stat-item">
+                            <div class="about-stat-num">0.3%</div>
+                            <div class="about-stat-label">超低转发损耗</div>
+                        </div>
+                        <div class="about-stat-item">
+                            <div class="about-stat-num">99.9%</div>
+                            <div class="about-stat-label">服务可用性</div>
+                        </div>
+                        <div class="about-stat-item">
+                            <div class="about-stat-num">10x</div>
+                            <div class="about-stat-label">性能提升</div>
+                        </div>
+                        <div class="about-stat-item">
+                            <div class="about-stat-num">7×24</div>
+                            <div class="about-stat-label">全天候服务</div>
                         </div>
                     </div>
 
                     <!-- 核心优势 -->
-                    <div class="about-section">
-                        <div class="section-header">
-                            <h2 class="section-title">为什么选择 NexusLink</h2>
-                            <p class="section-desc">专业级内网穿透解决方案</p>
-                        </div>
-                        <div class="features-grid">
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-speed"></div>
-                                <h3>极速转发</h3>
-                                <p>自主研发高性能转发引擎，超低延迟，无损转发，让你的服务飞起来</p>
+                    <div class="card">
+                        <div class="card-title">核心优势</div>
+                        <div class="about-features">
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-speed"></div>
+                                <div>
+                                    <div class="about-feature-name">极速转发</div>
+                                    <div class="about-feature-desc">自主研发高性能转发引擎，超低延迟，无损转发</div>
+                                </div>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-security"></div>
-                                <h3>安全可靠</h3>
-                                <p>多层安全防护，数据加密传输，完整的审计日志系统，保障你的数据安全</p>
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-security"></div>
+                                <div>
+                                    <div class="about-feature-name">安全可靠</div>
+                                    <div class="about-feature-desc">多层安全防护，数据加密传输，完整审计日志</div>
+                                </div>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-stable"></div>
-                                <h3>稳定运行</h3>
-                                <p>多节点容灾备份，智能负载均衡，99.9%可用性承诺，服务永不掉线</p>
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-stable"></div>
+                                <div>
+                                    <div class="about-feature-name">稳定运行</div>
+                                    <div class="about-feature-desc">多节点容灾备份，智能负载均衡，高可用性</div>
+                                </div>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-easy"></div>
-                                <h3>简单易用</h3>
-                                <p>可视化管理面板，一键创建隧道，零配置启动，新手也能快速上手</p>
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-easy"></div>
+                                <div>
+                                    <div class="about-feature-name">简单易用</div>
+                                    <div class="about-feature-desc">可视化管理面板，一键创建隧道，零配置启动</div>
+                                </div>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-protocol"></div>
-                                <h3>多协议支持</h3>
-                                <p>支持 TCP、UDP、HTTP、HTTPS 等多种协议，满足各种场景需求</p>
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-protocol"></div>
+                                <div>
+                                    <div class="about-feature-name">多协议支持</div>
+                                    <div class="about-feature-desc">支持 TCP、UDP、HTTP、HTTPS 等多种协议</div>
+                                </div>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon feature-icon-free"></div>
-                                <h3>半公益免费</h3>
-                                <p>基础功能永久免费，每日签到领取流量，让每个人都能用得起</p>
+                            <div class="about-feature-item">
+                                <div class="about-feature-icon icon-free"></div>
+                                <div>
+                                    <div class="about-feature-name">半公益免费</div>
+                                    <div class="about-feature-desc">基础功能永久免费，每日签到领取流量</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 半公益理念 -->
-                    <div class="about-section about-welfare">
-                        <div class="welfare-card">
-                            <div class="welfare-icon">❤</div>
-                            <h2>半公益运营理念</h2>
-                            <p class="welfare-desc">
-                                我们相信技术应该服务于人，而不是成为盈利的工具。<br>
-                                NexusLink 坚持半公益运营模式，基础功能永久免费，<br>
-                                通过付费用户的支持来维持平台的运营和发展。
+                    <div class="card">
+                        <div class="card-title">半公益理念</div>
+                        <div class="card-body">
+                            <p class="about-text">
+                                我们相信技术应该服务于人，而不是成为盈利的工具。NexusLink 坚持半公益运营模式，
+                                基础功能永久免费，通过付费用户的支持来维持平台的运营和发展。
                             </p>
-                            <div class="welfare-features">
-                                <div class="welfare-item">
+                            <div class="about-welfare-list">
+                                <div class="about-welfare-item">
                                     <span class="welfare-check">✓</span>
                                     <span>注册即送基础流量</span>
                                 </div>
-                                <div class="welfare-item">
+                                <div class="about-welfare-item">
                                     <span class="welfare-check">✓</span>
                                     <span>每日签到免费领取流量</span>
                                 </div>
-                                <div class="welfare-item">
+                                <div class="about-welfare-item">
                                     <span class="welfare-check">✓</span>
                                     <span>所有核心功能免费开放</span>
                                 </div>
-                                <div class="welfare-item">
+                                <div class="about-welfare-item">
                                     <span class="welfare-check">✓</span>
                                     <span>无广告、无捆绑、无套路</span>
                                 </div>
@@ -3059,111 +3044,47 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     </div>
 
                     <!-- 技术实力 -->
-                    <div class="about-section">
-                        <div class="section-header">
-                            <h2 class="section-title">技术实力</h2>
-                            <p class="section-desc">自主研发，技术可控</p>
-                        </div>
-                        <div class="tech-stack">
-                            <div class="tech-item">
-                                <div class="tech-name">C 语言引擎</div>
-                                <div class="tech-desc">核心转发引擎纯 C 语言实现，性能极致</div>
+                    <div class="card">
+                        <div class="card-title">技术实力</div>
+                        <div class="about-tech-grid">
+                            <div class="about-tech-item">
+                                <div class="about-tech-name">C 语言引擎</div>
+                                <div class="about-tech-desc">核心转发引擎纯 C 语言实现，性能极致</div>
                             </div>
-                            <div class="tech-item">
-                                <div class="tech-name">PHP + MySQL</div>
-                                <div class="tech-desc">稳定可靠的 Web 平台技术栈</div>
+                            <div class="about-tech-item">
+                                <div class="about-tech-name">PHP + MySQL</div>
+                                <div class="about-tech-desc">稳定可靠的 Web 平台技术栈</div>
                             </div>
-                            <div class="tech-item">
-                                <div class="tech-name">事件驱动</div>
-                                <div class="tech-desc">epoll 异步 IO 模型，高并发支持</div>
+                            <div class="about-tech-item">
+                                <div class="about-tech-name">事件驱动</div>
+                                <div class="about-tech-desc">epoll 异步 IO 模型，高并发支持</div>
                             </div>
-                            <div class="tech-item">
-                                <div class="tech-name">安全加密</div>
-                                <div class="tech-desc">AES-256 加密，JWT 认证，多层防护</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 发展历程 -->
-                    <div class="about-section">
-                        <div class="section-header">
-                            <h2 class="section-title">发展历程</h2>
-                            <p class="section-desc">持续迭代，不断进步</p>
-                        </div>
-                        <div class="timeline">
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.06</div>
-                                    <div class="timeline-title">v0.6 安全增强</div>
-                                    <div class="timeline-desc">登录安全防护、操作日志审计、CSRF/XSS 防护</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.06</div>
-                                    <div class="timeline-title">v0.5 全面优化</div>
-                                    <div class="timeline-desc">用户端 UI 全面升级，性能深度优化</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.06</div>
-                                    <div class="timeline-title">v0.4 功能完善</div>
-                                    <div class="timeline-desc">签到系统、API 密钥、个人中心等功能上线</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.06</div>
-                                    <div class="timeline-title">v0.3 多用户平台</div>
-                                    <div class="timeline-desc">PHP + MySQL 多用户管理平台上线</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.05</div>
-                                    <div class="timeline-title">v0.2 Go 语言版本</div>
-                                    <div class="timeline-desc">Go 语言重写，性能大幅提升</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="timeline-dot timeline-dot-first"></div>
-                                <div class="timeline-content">
-                                    <div class="timeline-date">2026.04</div>
-                                    <div class="timeline-title">项目启动</div>
-                                    <div class="timeline-desc">NexusLink 项目正式启动，开始研发</div>
-                                </div>
+                            <div class="about-tech-item">
+                                <div class="about-tech-name">安全加密</div>
+                                <div class="about-tech-desc">AES-256 加密，JWT 认证，多层防护</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 联系我们 -->
-                    <div class="about-section about-contact">
-                        <div class="contact-card">
-                            <h2>联系我们</h2>
-                            <p class="contact-desc">有任何问题或建议，欢迎联系我们</p>
-                            <div class="contact-info">
-                                <div class="contact-item">
-                                    <span class="contact-label">官方网站</span>
-                                    <span class="contact-value">51.tokenr.cn</span>
-                                </div>
-                                <div class="contact-item">
-                                    <span class="contact-label">联系邮箱</span>
-                                    <span class="contact-value">postmaster@tokenr.cn</span>
-                                </div>
+                    <div class="card">
+                        <div class="card-title">联系我们</div>
+                        <div class="about-contact-list">
+                            <div class="about-contact-item">
+                                <span class="about-contact-label">官方网站</span>
+                                <span class="about-contact-value">51.tokenr.cn</span>
+                            </div>
+                            <div class="about-contact-item">
+                                <span class="about-contact-label">联系邮箱</span>
+                                <span class="about-contact-value">postmaster@tokenr.cn</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 底部版权 -->
-                    <div class="about-footer">
-                        <p>© 2026 NexusLink 内网穿透平台 · 内网穿透.中国</p>
-                        <p class="footer-version">当前版本：<?php echo CURRENT_VERSION; ?></p>
+                    <!-- 版本信息 -->
+                    <div class="about-version-info">
+                        <p>当前版本：<?php echo CURRENT_VERSION; ?></p>
+                        <p>© 2026 NexusLink. All rights reserved.</p>
                     </div>
                 </div>
 
