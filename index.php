@@ -3156,10 +3156,6 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                                     <span class="contact-label">联系邮箱</span>
                                     <span class="contact-value">postmaster@tokenr.cn</span>
                                 </div>
-                                <div class="contact-item">
-                                    <span class="contact-label">品牌域名</span>
-                                    <span class="contact-value">内网穿透.中国</span>
-                                </div>
                             </div>
                         </div>
                     </div>
