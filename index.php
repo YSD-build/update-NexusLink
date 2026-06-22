@@ -45,8 +45,66 @@ function auto_install() {
             $sql = "ALTER TABLE `{$prefix}users` ADD COLUMN `email_verified` tinyint NOT NULL DEFAULT 0 COMMENT '邮箱验证状态: 0未验证, 1已验证' AFTER `status`";
             $db->exec($sql);
         }
+        
+        // 检查 nl_login_logs 表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}login_logs'");
+        if (!$stmt->fetch()) {
+            // 创建登录记录表
+            $sql = "CREATE TABLE `{$prefix}login_logs` (
+              `id` int unsigned NOT NULL AUTO_INCREMENT,
+              `user_id` int unsigned NOT NULL COMMENT '用户ID',
+              `ip` varchar(45) NOT NULL DEFAULT '' COMMENT '登录IP',
+              `user_agent` varchar(500) NOT NULL DEFAULT '' COMMENT '浏览器UA',
+              `status` tinyint NOT NULL DEFAULT 1 COMMENT '登录状态: 1成功, 0失败',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              KEY `user_id` (`user_id`),
+              KEY `created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录记录表'";
+            $db->exec($sql);
+        }
+
+        // 检查 nl_api_keys 表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}api_keys'");
+        if (!$stmt->fetch()) {
+            // 创建API密钥表
+            $sql = "CREATE TABLE `{$prefix}api_keys` (
+              `id` int unsigned NOT NULL AUTO_INCREMENT,
+              `user_id` int unsigned NOT NULL COMMENT '用户ID',
+              `name` varchar(100) NOT NULL DEFAULT '' COMMENT '密钥名称',
+              `api_key` varchar(64) NOT NULL COMMENT 'API密钥',
+              `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 1启用, 0禁用',
+              `last_used_at` datetime DEFAULT NULL COMMENT '最后使用时间',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `api_key` (`api_key`),
+              KEY `user_id` (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API密钥表'";
+            $db->exec($sql);
+        }
+
     } catch (Exception $e) {
         // 静默失败，不影响正常使用
+    }
+}
+
+
+// 记录登录日志
+function log_login($user_id, $status) {
+    $db = db();
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    
+    // 截断UA，避免过长
+    if (strlen($user_agent) > 500) {
+        $user_agent = substr($user_agent, 0, 500);
+    }
+    
+    try {
+        $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "login_logs (user_id, ip, user_agent, status) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$user_id, $ip, $user_agent, $status ? 1 : 0]);
+    } catch (Exception $e) {
+        // 静默失败，不影响登录
     }
 }
 
@@ -58,6 +116,51 @@ session_start();
 
 // 获取当前action
 $action = $_GET['action'] ?? 'home';
+
+// 处理邮箱验证token
+if ($action == 'verify' && isset($_GET['token'])) {
+    require_once 'api/functions.php';
+    
+    $token = $_GET['token'];
+    $payload = jwt_decode($token);
+    
+    if (!$payload || !isset($payload['type']) || $payload['type'] !== 'email_verify') {
+        $error = '验证链接无效或已过期';
+    } else {
+        $db = db();
+        $user_id = intval($payload['user_id']);
+        $email = $payload['email'];
+        
+        // 验证用户
+        $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "users WHERE id = ? AND email = ?");
+        $stmt->execute([$user_id, $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            $error = '验证链接无效';
+        } elseif ($user['email_verified']) {
+            $success = '邮箱已验证，无需重复验证';
+        } else {
+            // 更新验证状态
+            $stmt = $db->prepare("UPDATE " . DB_PREFIX . "users SET email_verified = 1, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$user_id]);
+            
+            $success = '邮箱验证成功！';
+            
+            // 如果用户已登录，刷新用户信息
+            if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $user_id) {
+                $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "users WHERE id = ?");
+                $stmt->execute([$user_id]);
+                $current_user = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        }
+    }
+    
+    // 显示验证结果页面
+    $action = 'verify_result';
+}
+
+
 
 // 获取当前用户
 $current_user = null;
@@ -88,13 +191,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             if ($user && password_verify($password, $user['password'])) {
                 if ($user['status'] == 0) {
+                    // 记录登录失败日志
+                    log_login($user['id'], false);
                     $error = '账号已被禁用';
                 } else {
                     $_SESSION['user_id'] = $user['id'];
+                    // 记录登录成功日志
+                    log_login($user['id'], true);
                     header('Location: index.php?action=dashboard');
                     exit;
                 }
             } else {
+                // 记录登录失败日志
+                if ($user) {
+                    log_login($user['id'], false);
+                }
                 $error = '邮箱或密码错误';
             }
         }
@@ -401,6 +512,76 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     
+
+    // 重新发送验证邮件
+    if ($post_action == 'resend_verify' && $current_user) {
+        if ($current_user['email_verified']) {
+            $error = '邮箱已验证，无需重复验证';
+        } else {
+            require_once 'api/mail.php';
+            require_once 'api/functions.php';
+            
+            // 生成邮箱验证token（有效期24小时）
+            $verifyToken = jwt_encode([
+                'user_id' => (int)$current_user['id'],
+                'email' => $current_user['email'],
+                'type' => 'email_verify',
+                'exp' => time() + 86400,
+            ]);
+            
+            // 发送验证邮件
+            $mailSent = Mailer::sendVerifyEmail($current_user['email'], $current_user['username'], $verifyToken);
+            
+            if ($mailSent) {
+                $success = '验证邮件已发送，请查收邮箱';
+            } else {
+                $error = '邮件发送失败，请稍后重试';
+            }
+        }
+    }
+
+
+    // 创建API密钥
+    if ($post_action == 'create_api_key' && $current_user) {
+        $name = trim($_POST['name'] ?? '');
+        
+        if (!$name) {
+            $error = '请输入密钥名称';
+        } else {
+            $db = db();
+            
+            // 检查用户密钥数量（最多5个）
+            $stmt = $db->prepare("SELECT COUNT(*) as count FROM " . DB_PREFIX . "api_keys WHERE user_id = ?");
+            $stmt->execute([$current_user['id']]);
+            $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+            
+            if ($count >= 5) {
+                $error = '最多只能创建5个API密钥';
+            } else {
+                // 生成API密钥
+                $api_key = 'nl_' . bin2hex(random_bytes(24));
+                
+                $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "api_keys (user_id, name, api_key) VALUES (?, ?, ?)");
+                $stmt->execute([$current_user['id'], $name, $api_key]);
+                
+                $success = 'API密钥创建成功：' . $api_key;
+            }
+        }
+    }
+    
+    // 删除API密钥
+    if ($post_action == 'delete_api_key' && $current_user) {
+        $key_id = intval($_POST['key_id'] ?? 0);
+        
+        if ($key_id > 0) {
+            $db = db();
+            $stmt = $db->prepare("DELETE FROM " . DB_PREFIX . "api_keys WHERE id = ? AND user_id = ?");
+            $stmt->execute([$key_id, $current_user['id']]);
+            
+            $success = 'API密钥已删除';
+        }
+    }
+
     // 签到领流量
     if ($post_action == 'checkin' && $current_user) {
         $db = db();
@@ -1486,6 +1667,232 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     </div>
                 </div>
 
+            <?php elseif ($action == 'api_keys'): ?>
+                <!-- API密钥管理 -->
+                <div class="card">
+                    <div class="card-title">
+                        <span class="card-title-icon icon-api"></span>
+                        API 密钥管理
+                    </div>
+                    
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($success)): ?>
+                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                    <?php endif; ?>
+                    
+                    <!-- 创建密钥表单 -->
+                    <div class="create-api-form">
+                        <form method="post" action="" style="display: flex; gap: 10px; align-items: flex-end;">
+                            <input type="hidden" name="action" value="create_api_key">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label class="form-label">密钥名称</label>
+                                <input type="text" name="name" class="form-input" placeholder="例如：我的脚本、服务器监控" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">创建密钥</button>
+                        </form>
+                    </div>
+                    
+                    <div style="margin: 20px 0; border-top: 1px solid var(--border-color);"></div>
+                    
+                    <?php
+                    // 获取用户的API密钥
+                    $db = db();
+                    $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "api_keys WHERE user_id = ? ORDER BY created_at DESC");
+                    $stmt->execute([$current_user['id']]);
+                    $api_keys = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    ?>
+                    
+                    <?php if (empty($api_keys)): ?>
+                        <div class="empty-state">
+                            <div class="empty-icon">🔑</div>
+                            <div class="empty-text">暂无API密钥</div>
+                            <div class="empty-desc">创建API密钥后，可通过API接口管理您的隧道</div>
+                        </div>
+                    <?php else: ?>
+                        <div class="api-keys-list">
+                            <?php foreach ($api_keys as $key): ?>
+                                <div class="api-key-item">
+                                    <div class="api-key-info">
+                                        <div class="api-key-name"><?php echo htmlspecialchars($key['name']); ?></div>
+                                        <div class="api-key-value" onclick="copyText('<?php echo htmlspecialchars($key['api_key']); ?>')" title="点击复制">
+                                            <code><?php echo htmlspecialchars($key['api_key']); ?></code>
+                                            <span class="copy-hint">点击复制</span>
+                                        </div>
+                                        <div class="api-key-meta">
+                                            <span>创建时间：<?php echo htmlspecialchars($key['created_at']); ?></span>
+                                            <span>最后使用：<?php echo $key['last_used_at'] ? htmlspecialchars($key['last_used_at']) : '从未使用'; ?></span>
+                                            <span class="<?php echo $key['status'] ? 'text-success' : 'text-error'; ?>">
+                                                <?php echo $key['status'] ? '已启用' : '已禁用'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="api-key-actions">
+                                        <form method="post" action="" onsubmit="return confirm('确定要删除这个API密钥吗？删除后无法恢复！');">
+                                            <input type="hidden" name="action" value="delete_api_key">
+                                            <input type="hidden" name="key_id" value="<?php echo $key['id']; ?>">
+                                            <button type="submit" class="btn btn-danger btn-small">删除</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div style="margin-top: 20px;">
+                        <a href="index.php?action=profile" class="btn">← 返回个人中心</a>
+                    </div>
+                </div>
+
+            <?php elseif ($action == 'verify_result'): ?>
+                <!-- 邮箱验证结果 -->
+                <div class="card" style="max-width:500px; text-align:center;">
+                    <div class="card-title">邮箱验证</div>
+                    
+                    <?php if (isset($error)): ?>
+                        <div style="padding: 30px 0;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">❌</div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--error-color); margin-bottom: 10px;">验证失败</div>
+                            <div style="color: var(--text-secondary);"><?php echo htmlspecialchars($error); ?></div>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($success)): ?>
+                        <div style="padding: 30px 0;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--success-color); margin-bottom: 10px;">验证成功</div>
+                            <div style="color: var(--text-secondary);"><?php echo htmlspecialchars($success); ?></div>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div style="margin-top:20px;">
+                        <?php if ($current_user): ?>
+                            <a href="index.php?action=dashboard" class="btn btn-primary">进入控制台</a>
+                        <?php else: ?>
+                            <a href="index.php?action=login" class="btn btn-primary">去登录</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php elseif ($action == 'login_logs'): ?>
+                <!-- 登录记录 -->
+                <div class="card">
+                    <div class="card-title">
+                        <span class="card-title-icon icon-login"></span>
+                        登录记录
+                    </div>
+                    
+                    <?php
+                    // 获取登录记录
+                    $db = db();
+                    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                    $per_page = 20;
+                    $offset = ($page - 1) * $per_page;
+                    
+                    // 获取总数
+                    $stmt = $db->prepare("SELECT COUNT(*) as total FROM " . DB_PREFIX . "login_logs WHERE user_id = ?");
+                    $stmt->execute([$current_user['id']]);
+                    $total = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+                    $total_pages = ceil($total / $per_page);
+                    
+                    // 获取登录记录
+                    $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "login_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?");
+                    $stmt->execute([$current_user['id'], $per_page, $offset]);
+                    $login_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    ?>
+                    
+                    <?php if (empty($login_logs)): ?>
+                        <div class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <div class="empty-text">暂无登录记录</div>
+                        </div>
+                    <?php else: ?>
+                        <div class="login-logs-list">
+                            <?php foreach ($login_logs as $log): ?>
+                                <div class="login-log-item">
+                                    <div class="log-status <?php echo $log['status'] ? 'status-success' : 'status-failed'; ?>">
+                                        <?php echo $log['status'] ? '✓' : '✗'; ?>
+                                    </div>
+                                    <div class="log-info">
+                                        <div class="log-time"><?php echo htmlspecialchars($log['created_at']); ?></div>
+                                        <div class="log-ip">IP：<?php echo htmlspecialchars($log['ip'] ?: '未知'); ?></div>
+                                        <div class="log-ua" title="<?php echo htmlspecialchars($log['user_agent']); ?>">
+                                            <?php 
+                                            $ua = htmlspecialchars($log['user_agent'] ?: '未知');
+                                            echo mb_strlen($ua) > 60 ? mb_substr($ua, 0, 60) . '...' : $ua;
+                                            ?>
+                                        </div>
+                                    </div>
+                                    <div class="log-result <?php echo $log['status'] ? 'text-success' : 'text-error'; ?>">
+                                        <?php echo $log['status'] ? '成功' : '失败'; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <?php if ($total_pages > 1): ?>
+                            <div class="pagination">
+                                <?php if ($page > 1): ?>
+                                    <a href="index.php?action=login_logs&page=<?php echo $page - 1; ?>" class="btn btn-small">上一页</a>
+                                <?php endif; ?>
+                                <span class="pagination-info">第 <?php echo $page; ?> / <?php echo $total_pages; ?> 页</span>
+                                <?php if ($page < $total_pages): ?>
+                                    <a href="index.php?action=login_logs&page=<?php echo $page + 1; ?>" class="btn btn-small">下一页</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    
+                    <div style="margin-top:20px;">
+                        <a href="index.php?action=profile" class="btn">← 返回个人中心</a>
+                    </div>
+                </div>
+
+            <?php elseif ($action == 'verify_email'): ?>
+                <!-- 邮箱验证 -->
+                <div class="card" style="max-width:500px;">
+                    <div class="card-title">
+                        <span class="card-title-icon icon-email"></span>
+                        邮箱验证
+                    </div>
+                    
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($success)): ?>
+                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if ($current_user['email_verified']): ?>
+                        <div style="text-align:center; padding: 30px 0;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--success-color); margin-bottom: 10px;">邮箱已验证</div>
+                            <div style="color: var(--text-secondary);">您的邮箱 <?php echo htmlspecialchars($current_user['email']); ?> 已成功验证</div>
+                        </div>
+                    <?php else: ?>
+                        <div style="text-align:center; padding: 20px 0 30px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--warning-color); margin-bottom: 10px;">邮箱未验证</div>
+                            <div style="color: var(--text-secondary); margin-bottom: 20px;">
+                                当前邮箱：<?php echo htmlspecialchars($current_user['email']); ?><br>
+                                验证邮箱后可享受更多功能
+                            </div>
+                            
+                            <form method="post" action="" style="margin-top: 20px;">
+                                <input type="hidden" name="action" value="resend_verify">
+                                <button type="submit" class="btn btn-primary btn-large btn-block">重新发送验证邮件</button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div style="margin-top:20px;">
+                        <a href="index.php?action=profile" class="btn">← 返回个人中心</a>
+                    </div>
+                </div>
+
             <?php elseif ($action == 'profile'): ?>
                 <!-- 个人中心 -->
                 <div class="user-center">
@@ -1585,7 +1992,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                                     </div>
                                     <div class="function-arrow">→</div>
                                 </a>
-                                <div class="function-card disabled">
+                                <a href="index.php?action=verify_email" class="function-card">
                                     <div class="function-icon email-icon"></div>
                                     <div class="function-info">
                                         <div class="function-name">邮箱验证</div>
@@ -1598,23 +2005,23 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                                         </div>
                                     </div>
                                     <div class="function-arrow">→</div>
-                                </div>
-                                <div class="function-card disabled">
+                                </a>
+                                <a href="index.php?action=login_logs" class="function-card">
                                     <div class="function-icon login-icon"></div>
                                     <div class="function-info">
                                         <div class="function-name">登录记录</div>
                                         <div class="function-desc">查看账户登录历史记录</div>
                                     </div>
                                     <div class="function-arrow">→</div>
-                                </div>
-                                <div class="function-card disabled">
+                                </a>
+                                <a href="index.php?action=api_keys" class="function-card">
                                     <div class="function-icon api-icon"></div>
                                     <div class="function-info">
                                         <div class="function-name">API 密钥</div>
                                         <div class="function-desc">管理 API 访问密钥</div>
                                     </div>
                                     <div class="function-arrow">→</div>
-                                </div>
+                                </a>
                             </div>
                         </div>
 
