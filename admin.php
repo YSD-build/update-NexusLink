@@ -1110,6 +1110,10 @@ $stats = get_admin_stats();
                     <span class="menu-icon" style="width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:14px;">📋</span>
                     <span class="menu-text">登录日志</span>
                 </a>
+                <a href="admin.php?action=operation_logs" class="menu-item <?php echo $action == 'operation_logs' ? 'active' : ''; ?>">
+                    <span class="menu-icon">📋</span>
+                    <span class="menu-text">操作日志</span>
+                </a>
                 
                 <!-- 系统管理分组 -->
                 <div class="menu-group">系统管理</div>
@@ -2134,6 +2138,117 @@ $stats = get_admin_stats();
                     <?php endif; ?>
                 </div>
                 
+
+            <?php elseif ($action == 'operation_logs'): ?>
+                <!-- 操作日志 -->
+                <div class="card">
+                    <div class="action-bar">
+                        <div class="action-bar-title">操作日志</div>
+                        <form method="get" action="" style="display:flex; gap:10px;">
+                            <input type="hidden" name="action" value="operation_logs">
+                            <input type="text" name="search" placeholder="搜索操作..." value="<?php echo htmlspecialchars($search ?? ''); ?>" style="padding:8px 12px; border:1px solid #dcdfe6; border-radius:4px;">
+                            <select name="action_type" style="padding:8px 12px; border:1px solid #dcdfe6; border-radius:4px;">
+                                <option value="">全部操作</option>
+                                <option value="login" <?php echo ($action_type ?? '') == 'login' ? 'selected' : ''; ?>>登录</option>
+                                <option value="login_fail" <?php echo ($action_type ?? '') == 'login_fail' ? 'selected' : ''; ?>>登录失败</option>
+                                <option value="register" <?php echo ($action_type ?? '') == 'register' ? 'selected' : ''; ?>>注册</option>
+                                <option value="create_tunnel" <?php echo ($action_type ?? '') == 'create_tunnel' ? 'selected' : ''; ?>>创建隧道</option>
+                                <option value="delete_tunnel" <?php echo ($action_type ?? '') == 'delete_tunnel' ? 'selected' : ''; ?>>删除隧道</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-small">搜索</button>
+                        </form>
+                    </div>
+                    
+                    <?php
+                    $search = $_GET['search'] ?? '';
+                    $action_type = $_GET['action_type'] ?? '';
+                    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                    $per_page = 20;
+                    $offset = ($page - 1) * $per_page;
+                    
+                    $where_sql = "WHERE 1=1";
+                    $params = [];
+                    
+                    if ($search) {
+                        $where_sql .= " AND (o.description LIKE ? OR o.username LIKE ? OR o.ip LIKE ?)";
+                        $search_param = "%$search%";
+                        $params[] = $search_param;
+                        $params[] = $search_param;
+                        $params[] = $search_param;
+                    }
+                    
+                    if ($action_type) {
+                        $where_sql .= " AND o.action = ?";
+                        $params[] = $action_type;
+                    }
+                    
+                    // 总数
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM {$prefix}operation_logs o $where_sql");
+                    $stmt->execute($params);
+                    $total = $stmt->fetchColumn();
+                    
+                    // 列表
+                    $stmt = $db->prepare("SELECT o.* FROM {$prefix}operation_logs o $where_sql ORDER BY o.id DESC LIMIT $offset, $per_page");
+                    $stmt->execute($params);
+                    $logs = $stmt->fetchAll();
+                    
+                    $total_pages = ceil($total / $per_page);
+                    ?>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户</th>
+                                <th>操作</th>
+                                <th>IP</th>
+                                <th>描述</th>
+                                <th>状态</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($logs)): ?>
+                                <tr>
+                                    <td colspan="7" style="text-align:center; padding:40px; color:#909399;">暂无操作日志</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($logs as $log): ?>
+                                    <tr>
+                                        <td><?php echo $log['id']; ?></td>
+                                        <td><?php echo htmlspecialchars($log['username'] ?? '-'); ?></td>
+                                        <td>
+                                            <span class="badge badge-info"><?php echo htmlspecialchars($log['action']); ?></span>
+                                        </td>
+                                        <td style="font-family:monospace; font-size:12px;"><?php echo htmlspecialchars($log['ip'] ?? '-'); ?></td>
+                                        <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo htmlspecialchars($log['description'] ?? '-'); ?></td>
+                                        <td>
+                                            <?php if ($log['status'] == 1): ?>
+                                                <span class="badge badge-success">成功</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-danger">失败</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="font-size:12px; color:#909399;"><?php echo $log['created_at']; ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                    
+                    <div class="pagination" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="color:#909399; font-size:13px;">共 <?php echo $total; ?> 条记录</div>
+                        <div style="display:flex; gap:8px;">
+                            <?php if ($page > 1): ?>
+                                <a href="admin.php?action=operation_logs&page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&action_type=<?php echo urlencode($action_type); ?>" class="btn btn-xs">上一页</a>
+                            <?php endif; ?>
+                            <span style="padding:6px 12px; font-size:13px;"><?php echo $page; ?> / <?php echo max(1, $total_pages); ?></span>
+                            <?php if ($page < $total_pages): ?>
+                                <a href="admin.php?action=operation_logs&page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&action_type=<?php echo urlencode($action_type); ?>" class="btn btn-xs">下一页</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             <?php elseif ($action == 'settings'): ?>
                 <!-- 站点设置 -->
                 <div class="card" style="max-width:800px;">

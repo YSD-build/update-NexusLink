@@ -172,6 +172,82 @@ function auto_install() {
             $db->exec($sql);
         }
 
+
+        // 检查 nl_login_fails 表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}login_fails'");
+        if (!$stmt->fetch()) {
+            // 创建登录失败表
+            $sql = "CREATE TABLE `{$prefix}login_fails` (
+              `id` int(11) NOT NULL AUTO_INCREMENT,
+              `ip` varchar(45) NOT NULL COMMENT 'IP地址',
+              `username` varchar(50) DEFAULT NULL COMMENT '尝试登录的用户名',
+              `fail_count` int(11) NOT NULL DEFAULT 1 COMMENT '失败次数',
+              `last_attempt` datetime NOT NULL COMMENT '最后尝试时间',
+              `locked_until` datetime DEFAULT NULL COMMENT '锁定截止时间',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `ip_username` (`ip`, `username`),
+              KEY `ip` (`ip`),
+              KEY `locked_until` (`locked_until`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录失败记录表'";
+            $db->exec($sql);
+        }
+
+        // 检查 nl_operation_logs 表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}operation_logs'");
+        if (!$stmt->fetch()) {
+            // 创建操作日志表
+            $sql = "CREATE TABLE `{$prefix}operation_logs` (
+              `id` int(11) NOT NULL AUTO_INCREMENT,
+              `user_id` int(11) DEFAULT NULL COMMENT '操作用户ID',
+              `username` varchar(50) DEFAULT NULL COMMENT '操作用户名',
+              `ip` varchar(45) DEFAULT NULL COMMENT '操作IP',
+              `user_agent` varchar(500) DEFAULT NULL COMMENT '用户代理',
+              `action` varchar(100) NOT NULL COMMENT '操作类型',
+              `target_type` varchar(50) DEFAULT NULL COMMENT '目标类型',
+              `target_id` int(11) DEFAULT NULL COMMENT '目标ID',
+              `description` text COMMENT '操作描述',
+              `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1成功 0失败',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              KEY `user_id` (`user_id`),
+              KEY `action` (`action`),
+              KEY `created_at` (`created_at`),
+              KEY `ip` (`ip`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表'";
+            $db->exec($sql);
+        }
+
+        // 插入默认安全设置
+        $defaultSettings = [
+            'login_max_fails' => '5',
+            'login_lock_time' => '30',
+            'login_captcha_enabled' => '0',
+            'password_min_length' => '8',
+            'password_require_uppercase' => '0',
+            'password_require_lowercase' => '1',
+            'password_require_number' => '1',
+            'password_require_special' => '0',
+            'session_timeout' => '86400',
+            'max_concurrent_logins' => '5',
+            'csrf_protection' => '1',
+            'xss_protection' => '1',
+            'operation_log_enabled' => '1',
+            'email_on_new_login' => '0',
+            'ip_whitelist_enabled' => '0',
+            'ip_whitelist' => ''
+        ];
+
+        foreach ($defaultSettings as $key => $value) {
+            try {
+                $stmt = $db->prepare("INSERT IGNORE INTO {$prefix}settings (setting_key, setting_value) VALUES (?, ?)");
+                $stmt->execute([$key, $value]);
+            } catch (Exception $e) {
+                // 忽略重复插入错误
+            }
+        }
+
     } catch (Exception $e) {
         // 静默失败，不影响正常使用
     }

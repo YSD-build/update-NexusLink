@@ -25,6 +25,9 @@ switch ($action) {
     case 'forgot':
         do_forgot();
         break;
+    case 'captcha':
+        do_captcha();
+        break;
     case 'reset':
         do_reset();
         break;
@@ -106,12 +109,32 @@ function do_register() {
 }
 
 // 登录
+// 登录
 function do_login() {
     $username = trim(get_param('username', ''));
     $password = get_param('password', '');
+    $captcha = get_param('captcha', '');
 
     if (!$username || !$password) {
-        error('邮箱和密码不能为空');
+        error('用户名和密码不能为空');
+    }
+
+    $ip = get_client_ip();
+
+    // 检查是否被锁定
+    if (is_login_locked($ip, $username)) {
+        error('登录失败次数过多，请稍后再试', 429);
+    }
+
+    // 检查是否需要验证码
+    if (need_captcha($ip, $username)) {
+        if (!$captcha) {
+            error('请输入验证码', 400);
+        }
+        if (!verify_captcha($captcha)) {
+            record_login_fail($ip, $username);
+            error('验证码错误', 400);
+        }
     }
 
     // 查找用户（支持邮箱或用户名登录）
@@ -121,18 +144,27 @@ function do_login() {
     );
 
     if (!$user) {
+        record_login_fail($ip, $username);
         error('用户名或密码错误', 401);
     }
 
     // 检查状态
     if ($user['status'] != 1) {
+        record_login_fail($ip, $username);
         error('账号已被禁用', 401);
     }
 
     // 验证密码
     if (!password_verify($password, $user['password'])) {
+        record_login_fail($ip, $username);
         error('用户名或密码错误', 401);
     }
+
+    // 登录成功，清除失败记录
+    clear_login_fails($ip, $username);
+
+    // 记录登录日志
+    log_operation($user['id'], $user['username'], 'login', 'user', $user['id'], '用户登录成功');
 
     // 生成Token
     $token = jwt_encode([
@@ -152,7 +184,6 @@ function do_login() {
         ]
     ], '登录成功');
 }
-
 // 邮箱验证
 function do_verify() {
     $token = get_param('token', '');
@@ -327,4 +358,47 @@ function do_reset() {
             'username' => $user['username'],
         ]
     ], '密码重置成功，请使用新密码登录');
+}
+
+// 生成验证码
+function do_captcha() {
+    $code = generate_captcha();
+    
+    // 生成验证码图片
+    $width = 120;
+    $height = 40;
+    $image = imagecreatetruecolor($width, $height);
+    
+    // 背景色
+    $bgColor = imagecolorallocate($image, 255, 255, 255);
+    imagefilledrectangle($image, 0, 0, $width, $height, $bgColor);
+    
+    // 文字颜色
+    $textColor = imagecolorallocate($image, 51, 102, 204);
+    
+    // 添加干扰线
+    for ($i = 0; $i < 5; $i++) {
+        $lineColor = imagecolorallocate($image, rand(100, 200), rand(100, 200), rand(100, 200));
+        imageline($image, rand(0, $width), rand(0, $height), rand(0, $width), rand(0, $height), $lineColor);
+    }
+    
+    // 添加干扰点
+    for ($i = 0; $i < 50; $i++) {
+        $pixelColor = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
+        imagesetpixel($image, rand(0, $width), rand(0, $height), $pixelColor);
+    }
+    
+    // 绘制验证码文字
+    $font = 5;
+    $x = 10;
+    for ($i = 0; $i < strlen($code); $i++) {
+        $charColor = imagecolorallocate($image, rand(0, 100), rand(0, 100), rand(100, 200));
+        imagechar($image, $font, $x + $i * 25, rand(5, 15), $code[$i], $charColor);
+    }
+    
+    // 输出图片
+    header('Content-Type: image/png');
+    imagepng($image);
+    imagedestroy($image);
+    exit;
 }
