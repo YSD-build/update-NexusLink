@@ -15,6 +15,95 @@ function db() {
 }
 
 // 自动检查并安装数据库表
+
+// 初始化设置表
+function init_settings_front() {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        // 检查设置表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}settings'");
+        if (!$stmt->fetch()) {
+            // 创建设置表
+            $sql = "CREATE TABLE `{$prefix}settings` (
+              `id` int unsigned NOT NULL AUTO_INCREMENT,
+              `setting_key` varchar(100) NOT NULL COMMENT '设置键',
+              `setting_value` text COMMENT '设置值',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `setting_key` (`setting_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统设置表'";
+            $db->exec($sql);
+            
+            // 插入默认设置
+            $default_settings = [
+                'site_name' => 'NexusLink',
+                'site_description' => '高性能内网穿透平台',
+                'register_enabled' => '1',
+                'email_verify_required' => '0',
+                'default_traffic_limit' => '100',
+                'checkin_reward' => '10',
+                'min_port' => '10000',
+                'max_port' => '60000',
+                'max_tunnels_per_user' => '10',
+            ];
+            
+            foreach ($default_settings as $key => $value) {
+                $stmt = $db->prepare("INSERT INTO {$prefix}settings (setting_key, setting_value) VALUES (?, ?)");
+                $stmt->execute([$key, $value]);
+            }
+        }
+    } catch (Exception $e) {
+        // 静默失败
+    }
+}
+
+// 获取设置
+function get_setting_front($key, $default = '') {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        $stmt = $db->prepare("SELECT setting_value FROM {$prefix}settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['setting_value'] : $default;
+    } catch (Exception $e) {
+        return $default;
+    }
+}
+
+// 获取所有设置
+function get_all_settings_front() {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        $stmt = $db->query("SELECT setting_key, setting_value FROM {$prefix}settings");
+        $settings = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        return $settings;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+// 初始化设置
+init_settings_front();
+
+// 获取所有设置
+$site_settings = get_all_settings_front();
+
+// 定义站点名称常量（用于兼容）
+if (!defined('SITE_NAME')) {
+    define('SITE_NAME', $site_settings['site_name'] ?? 'NexusLink');
+}
+
+
 function auto_install() {
     $db = db();
     $prefix = DB_PREFIX;
@@ -213,44 +302,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // 注册处理
     if ($post_action == 'register') {
-        $username = trim($_POST['username'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $confirm_password = $_POST['confirm_password'] ?? '';
-        $nickname = trim($_POST['nickname'] ?? '');
-        
-        $error = '';
-        if (!$username || !$password || !$email) {
-            $error = '请填写必填项';
-        } elseif (!validate_username($username)) {
-            $error = '用户名格式不正确（3-50位字母数字下划线）';
-        } elseif (!validate_email($email)) {
-            $error = '邮箱格式不正确';
-        } elseif (!validate_password($password)) {
-            $error = '密码长度至少6位';
-        } elseif ($password !== $confirm_password) {
-            $error = '两次输入的密码不一致';
+        // 检查是否开启注册
+        if (($site_settings['register_enabled'] ?? '1') != '1') {
+            $error = '抱歉，当前已关闭用户注册';
         } else {
-            $db = db();
+            $username = trim($_POST['username'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $confirm_password = $_POST['confirm_password'] ?? '';
+            $nickname = trim($_POST['nickname'] ?? '');
             
-            // 检查用户名是否存在
-            $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "users WHERE username = ?");
-            $stmt->execute([$username]);
-            if ($stmt->fetch()) {
-                $error = '用户名已存在';
+            $error = '';
+            if (!$username || !$password || !$email) {
+                $error = '请填写必填项';
+            } elseif (!validate_username($username)) {
+                $error = '用户名格式不正确（3-50位字母数字下划线）';
+            } elseif (!validate_email($email)) {
+                $error = '邮箱格式不正确';
+            } elseif (!validate_password($password)) {
+                $error = '密码长度至少6位';
+            } elseif ($password !== $confirm_password) {
+                $error = '两次输入的密码不一致';
             } else {
-                // 检查邮箱是否存在
-                $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "users WHERE email = ?");
-                $stmt->execute([$email]);
+                $db = db();
+                
+                // 检查用户名是否存在
+                $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "users WHERE username = ?");
+                $stmt->execute([$username]);
                 if ($stmt->fetch()) {
-                    $error = '邮箱已被注册';
+                    $error = '用户名已存在';
                 } else {
-                    // 创建用户
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "users (username, email, password, nickname, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'user', 1, NOW(), NOW())");
-                    $stmt->execute([$username, $email, $hashed_password, $nickname ?: $username]);
-                    
-                    $success = '注册成功，请登录';
+                    // 检查邮箱是否存在
+                    $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "users WHERE email = ?");
+                    $stmt->execute([$email]);
+                    if ($stmt->fetch()) {
+                        $error = '邮箱已被注册';
+                    } else {
+                        // 创建用户
+                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                        $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "users (username, email, password, nickname, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'user', 1, NOW(), NOW())");
+                        $stmt->execute([$username, $email, $hashed_password, $nickname ?: $username]);
+                        
+                        $success = '注册成功，请登录';
+                    }
                 }
             }
         }
@@ -368,27 +462,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $db = db();
             
-            // 检查节点是否存在
-            $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "nodes WHERE id = ? AND status = 1");
-            $stmt->execute([$node_id]);
-            $node = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$node) {
-                $error = '节点不存在或不可用';
+            // 检查用户隧道数量
+            $max_tunnels = intval($site_settings['max_tunnels_per_user'] ?? 10);
+            $stmt = $db->prepare("SELECT COUNT(*) as count FROM " . DB_PREFIX . "tunnels WHERE user_id = ?");
+            $stmt->execute([$current_user['id']]);
+            $tunnel_count = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($tunnel_count && $tunnel_count['count'] >= $max_tunnels) {
+                $error = '您已达到最大隧道数量限制（' . $max_tunnels . '个）';
             } else {
-                // 检查远程端口是否已被占用
-                $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "tunnels WHERE node_id = ? AND remote_port = ?");
-                $stmt->execute([$node_id, $remote_port]);
-                if ($stmt->fetch()) {
-                    $error = '该远程端口已被占用，请换一个';
+                // 检查端口范围
+                $min_port = intval($site_settings['min_port'] ?? 10000);
+                $max_port = intval($site_settings['max_port'] ?? 60000);
+                if ($remote_port < $min_port || $remote_port > $max_port) {
+                    $error = '远程端口必须在 ' . $min_port . ' - ' . $max_port . ' 之间';
                 } else {
-                    // 创建隧道
-                    $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "tunnels (user_id, node_id, name, type, local_addr, local_port, remote_port, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())");
-                    $stmt->execute([$current_user['id'], $node_id, $name, $type, $local_addr, $local_port, $remote_port]);
+                    // 检查节点是否存在
+                    $stmt = $db->prepare("SELECT * FROM " . DB_PREFIX . "nodes WHERE id = ? AND status = 1");
+                    $stmt->execute([$node_id]);
+                    $node = $stmt->fetch(PDO::FETCH_ASSOC);
                     
-                    $success = '隧道创建成功！';
-                    header('Location: index.php?action=tunnels');
-                    exit;
+                    if (!$node) {
+                        $error = '节点不存在或不可用';
+                    } else {
+                        // 检查远程端口是否已被占用
+                        $stmt = $db->prepare("SELECT id FROM " . DB_PREFIX . "tunnels WHERE node_id = ? AND remote_port = ?");
+                        $stmt->execute([$node_id, $remote_port]);
+                        if ($stmt->fetch()) {
+                            $error = '该远程端口已被占用，请换一个';
+                        } else {
+                            // 创建隧道
+                            $stmt = $db->prepare("INSERT INTO " . DB_PREFIX . "tunnels (user_id, node_id, name, type, local_addr, local_port, remote_port, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())");
+                            $stmt->execute([$current_user['id'], $node_id, $name, $type, $local_addr, $local_port, $remote_port]);
+                            
+                            $success = '隧道创建成功！';
+                            header('Location: index.php?action=tunnels');
+                            exit;
+                        }
+                    }
                 }
             }
         }
@@ -719,7 +829,7 @@ function get_checkin_info($user_id) {
     <meta name="apple-mobile-web-app-title" content="NexusLink">
     <meta name="theme-color" content="#ffffff">
     <meta name="format-detection" content="telephone=no">
-    <title>NexusLink 内网穿透平台</title>
+    <title><?php echo htmlspecialchars($site_settings['site_name'] ?? 'NexusLink'); ?> 内网穿透平台</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>

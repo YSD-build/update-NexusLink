@@ -50,6 +50,14 @@ function init_settings() {
                 'min_port' => '10000',
                 'max_port' => '60000',
                 'max_tunnels_per_user' => '10',
+                'mail_enabled' => '0',
+                'mail_host' => '',
+                'mail_port' => '465',
+                'mail_user' => '',
+                'mail_pass' => '',
+                'mail_from' => '',
+                'mail_from_name' => 'NexusLink',
+                'mail_secure' => 'ssl',
             ];
             
             foreach ($default_settings as $key => $value) {
@@ -207,6 +215,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
         save_setting('max_tunnels_per_user', intval($_POST['max_tunnels_per_user']));
     }
     
+    // 邮件配置
+    if (isset($_POST['mail_enabled'])) {
+        save_setting('mail_enabled', $_POST['mail_enabled'] == '1' ? '1' : '0');
+    }
+    if (isset($_POST['mail_host'])) {
+        save_setting('mail_host', trim($_POST['mail_host']));
+    }
+    if (isset($_POST['mail_port'])) {
+        save_setting('mail_port', intval($_POST['mail_port']));
+    }
+    if (isset($_POST['mail_user'])) {
+        save_setting('mail_user', trim($_POST['mail_user']));
+    }
+    if (isset($_POST['mail_pass'])) {
+        save_setting('mail_pass', trim($_POST['mail_pass']));
+    }
+    if (isset($_POST['mail_from'])) {
+        save_setting('mail_from', trim($_POST['mail_from']));
+    }
+    if (isset($_POST['mail_from_name'])) {
+        save_setting('mail_from_name', trim($_POST['mail_from_name']));
+    }
+    if (isset($_POST['mail_secure'])) {
+        save_setting('mail_secure', trim($_POST['mail_secure']));
+    }
+    
     // 重新加载设置
     $settings = get_all_settings();
     $settings_saved = true;
@@ -214,15 +248,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
 
 
 // 处理重新生成JWT密钥
+$jwt_result = null;
 if (isset($_GET['action']) && $_GET['action'] == 'regenerate_jwt' && $current_user && $current_user['role'] == 'admin') {
     $new_secret = bin2hex(random_bytes(32));
-    // 注意：这里只是示例，实际需要修改config.php
-    // 由于config.php不能直接修改，我们先记录到设置表中
+    
+    // 尝试修改config.php
+    $config_file = __DIR__ . '/api/config.php';
+    $config_content = file_get_contents($config_file);
+    
+    if ($config_content !== false) {
+        // 替换JWT_SECRET
+        $new_config = preg_replace(
+            "/define\('JWT_SECRET',\s*'[^']*'\);/",
+            "define('JWT_SECRET', '" . $new_secret . "');",
+            $config_content
+        );
+        
+        if ($new_config !== $config_content) {
+            if (file_put_contents($config_file, $new_config) !== false) {
+                $jwt_result = ['success' => true, 'message' => 'JWT密钥已重新生成，所有用户将需要重新登录'];
+            } else {
+                $jwt_result = ['success' => false, 'message' => '配置文件写入失败，请手动修改config.php中的JWT_SECRET为：' . $new_secret];
+            }
+        } else {
+            $jwt_result = ['success' => false, 'message' => '未找到JWT_SECRET配置项'];
+        }
+    } else {
+        $jwt_result = ['success' => false, 'message' => '无法读取配置文件'];
+    }
+    
+    // 也保存到设置表中
     save_setting('jwt_secret', $new_secret);
-    $settings_saved = true;
     $settings = get_all_settings();
-    header('Location: admin.php?action=advanced');
-    exit;
 }
 
 // 处理清理过期数据
@@ -1034,6 +1091,16 @@ $stats = get_admin_stats();
                 <div class="card" style="max-width:800px;">
                     <div class="card-title">高级设置</div>
                     
+                    <?php if ($jwt_result): ?>
+                        <div class="alert <?php echo $jwt_result['success'] ? 'alert-success' : 'alert-error'; ?>">
+                            <?php echo htmlspecialchars($jwt_result['message']); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($settings_saved): ?>
+                        <div class="alert alert-success">设置保存成功！</div>
+                    <?php endif; ?>
+                    
                     <?php if ($settings_saved): ?>
                         <div class="alert alert-success">设置保存成功！</div>
                     <?php endif; ?>
@@ -1091,6 +1158,94 @@ $stats = get_admin_stats();
                     </form>
                 </div>
 
+                
+            <?php elseif ($action == 'mail_config'): ?>
+                <!-- 邮件服务配置 -->
+                <div class="card" style="max-width:800px;">
+                    <div class="card-title">邮件服务配置</div>
+                    
+                    <?php if ($settings_saved): ?>
+                        <div class="alert alert-success">配置保存成功！</div>
+                    <?php endif; ?>
+                    
+                    <form method="post" action="">
+                        <input type="hidden" name="save_settings" value="1">
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>启用邮件服务</h4>
+                                <p>开启后可以发送验证邮件、通知邮件等</p>
+                            </div>
+                            <label class="switch <?php echo ($settings['mail_enabled'] ?? '0') == '1' ? 'active' : ''; ?>">
+                                <input type="checkbox" name="mail_enabled" value="1" <?php echo ($settings['mail_enabled'] ?? '0') == '1' ? 'checked' : ''; ?> style="display:none;">
+                            </label>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>SMTP 服务器</h4>
+                                <p>邮件服务器地址，如 smtp.qq.com</p>
+                            </div>
+                            <input type="text" name="mail_host" class="form-input" style="width:250px;" value="<?php echo htmlspecialchars($settings['mail_host'] ?? ''); ?>" placeholder="smtp.example.com">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>SMTP 端口</h4>
+                                <p>常用端口：465(SSL)、587(TLS)、25(不加密)</p>
+                            </div>
+                            <input type="number" name="mail_port" class="form-input" style="width:120px;" value="<?php echo htmlspecialchars($settings['mail_port'] ?? '465'); ?>">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>邮箱账号</h4>
+                                <p>用于发送邮件的邮箱地址</p>
+                            </div>
+                            <input type="text" name="mail_user" class="form-input" style="width:250px;" value="<?php echo htmlspecialchars($settings['mail_user'] ?? ''); ?>" placeholder="user@example.com">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>邮箱密码/授权码</h4>
+                                <p>邮箱密码或SMTP授权码</p>
+                            </div>
+                            <input type="password" name="mail_pass" class="form-input" style="width:250px;" value="<?php echo htmlspecialchars($settings['mail_pass'] ?? ''); ?>" placeholder="请输入密码">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>发件人邮箱</h4>
+                                <p>显示在收件人处的发件邮箱</p>
+                            </div>
+                            <input type="text" name="mail_from" class="form-input" style="width:250px;" value="<?php echo htmlspecialchars($settings['mail_from'] ?? ''); ?>" placeholder="noreply@example.com">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>发件人名称</h4>
+                                <p>显示在收件人处的发件人名称</p>
+                            </div>
+                            <input type="text" name="mail_from_name" class="form-input" style="width:200px;" value="<?php echo htmlspecialchars($settings['mail_from_name'] ?? 'NexusLink'); ?>">
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>加密方式</h4>
+                                <p>SSL 或 TLS</p>
+                            </div>
+                            <select name="mail_secure" class="form-input" style="width:120px;">
+                                <option value="ssl" <?php echo ($settings['mail_secure'] ?? 'ssl') == 'ssl' ? 'selected' : ''; ?>>SSL</option>
+                                <option value="tls" <?php echo ($settings['mail_secure'] ?? 'ssl') == 'tls' ? 'selected' : ''; ?>>TLS</option>
+                                <option value="" <?php echo ($settings['mail_secure'] ?? 'ssl') == '' ? 'selected' : ''; ?>>不加密</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-top:24px; text-align:right;">
+                            <button type="submit" class="btn btn-primary">保存配置</button>
+                        </div>
+                    </form>
+                </div>
                 
             <?php elseif ($action == 'update'): ?>
                 <!-- 系统更新 -->
