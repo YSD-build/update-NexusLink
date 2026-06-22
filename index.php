@@ -2018,15 +2018,43 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                                     <?php echo $current_user['role'] == 'admin' ? '管理员' : '普通用户'; ?>
                                 </span>
                             </div>
-                            <div class="user-email"><?php echo htmlspecialchars($current_user['email']); ?></div>
+                            <div class="user-email">
+                                <span class="email-icon-small"></span>
+                                <?php echo htmlspecialchars($current_user['email']); ?>
+                                <?php if ($current_user['email_verified']): ?>
+                                    <span class="verified-badge">✓ 已验证</span>
+                                <?php else: ?>
+                                    <span class="unverified-badge">未验证</span>
+                                <?php endif; ?>
+                            </div>
                             <div class="user-meta">
-                                <span>注册时间：<?php echo date('Y-m-d', strtotime($current_user['created_at'])); ?></span>
-                                <span>UID：#<?php echo $current_user['id']; ?></span>
+                                <span class="meta-item">
+                                    <span class="meta-label">注册时间</span>
+                                    <span class="meta-value"><?php echo date('Y-m-d', strtotime($current_user['created_at'])); ?></span>
+                                </span>
+                                <span class="meta-item">
+                                    <span class="meta-label">UID</span>
+                                    <span class="meta-value">#<?php echo $current_user['id']; ?></span>
+                                </span>
+                                <span class="meta-item">
+                                    <span class="meta-label">隧道数量</span>
+                                    <span class="meta-value">
+                                        <?php
+                                        $tunnel_count = 0;
+                                        if (function_exists('get_user_tunnels')) {
+                                            $tunnels = get_user_tunnels($current_user['id']);
+                                            $tunnel_count = count($tunnels);
+                                        }
+                                        echo $tunnel_count . ' 个';
+                                        ?>
+                                    </span>
+                                </span>
                             </div>
                         </div>
                         <div class="user-quick-actions">
                             <a href="index.php?action=create_tunnel" class="btn btn-primary">
-                                + 创建隧道
+                                <span class="btn-icon">+</span>
+                                创建隧道
                             </a>
                         </div>
                     </div>
@@ -2034,52 +2062,69 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                     <!-- 流量概览卡片 -->
                     <div class="traffic-overview-card">
                         <div class="section-title">
-                            <span class="section-icon">📊</span>
+                            <span class="section-icon section-icon-chart"></span>
                             流量概览
+                            <span class="section-badge">本月</span>
                         </div>
                         <div class="traffic-progress-section">
                             <div class="traffic-progress-header">
-                                <span>本月已用</span>
+                                <span>已使用</span>
                                 <span class="traffic-percent">
                                     <?php 
                                     $traffic_percent = 0;
                                     if ($current_user['traffic_limit'] > 0) {
                                         $traffic_percent = min(100, round($current_user['traffic'] / $current_user['traffic_limit'] * 100));
                                     }
-                                    echo $current_user['traffic_limit'] ? $traffic_percent . '%' : '不限';
+                                    echo $current_user['traffic_limit'] ? $traffic_percent . '%' : '不限流量';
                                     ?>
                                 </span>
                             </div>
                             <div class="progress-bar large">
                                 <div class="progress-bar-inner" style="width: <?php echo $current_user['traffic_limit'] ? $traffic_percent : 100; ?>%;"></div>
                             </div>
+                            <div class="traffic-used-info">
+                                <span class="used-amount"><?php echo format_traffic($current_user['traffic']); ?></span>
+                                <span class="total-amount"> / <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></span>
+                            </div>
                         </div>
                         <div class="traffic-stats-grid">
                             <div class="traffic-stat-card">
-                                <div class="stat-label">已用流量</div>
-                                <div class="stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
+                                <div class="stat-icon used-icon"></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">已用流量</div>
+                                    <div class="stat-value"><?php echo format_traffic($current_user['traffic']); ?></div>
+                                </div>
                             </div>
-                            <div class="traffic-stat-card">
-                                <div class="stat-label">剩余流量</div>
-                                <div class="stat-value text-success">
-                                    <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
+                            <div class="traffic-stat-card success">
+                                <div class="stat-icon remain-icon"></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">剩余流量</div>
+                                    <div class="stat-value text-success">
+                                        <?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit'] - $current_user['traffic']) : '不限'; ?>
+                                    </div>
                                 </div>
                             </div>
                             <div class="traffic-stat-card">
-                                <div class="stat-label">总流量</div>
-                                <div class="stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
+                                <div class="stat-icon total-icon"></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">总流量</div>
+                                    <div class="stat-value"><?php echo $current_user['traffic_limit'] ? format_traffic($current_user['traffic_limit']) : '不限'; ?></div>
+                                </div>
                             </div>
-                            <div class="traffic-stat-card">
-                                <div class="stat-label">隧道数量</div>
-                                <div class="stat-value">
-                                    <?php
-                                    $tunnel_count = 0;
-                                    if (function_exists('get_user_tunnels')) {
-                                        $tunnels = get_user_tunnels($current_user['id']);
-                                        $tunnel_count = count($tunnels);
-                                    }
-                                    echo $tunnel_count;
-                                    ?>
+                            <div class="traffic-stat-card primary">
+                                <div class="stat-icon tunnel-icon-small"></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">隧道数量</div>
+                                    <div class="stat-value">
+                                        <?php
+                                        $tunnel_count = 0;
+                                        if (function_exists('get_user_tunnels')) {
+                                            $tunnels = get_user_tunnels($current_user['id']);
+                                            $tunnel_count = count($tunnels);
+                                        }
+                                        echo $tunnel_count;
+                                        ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2090,7 +2135,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                         <!-- 账户安全 -->
                         <div class="function-section">
                             <div class="section-title">
-                                <span class="section-icon">🔐</span>
+                                <span class="section-icon section-icon-shield"></span>
                                 账户安全
                             </div>
                             <div class="function-grid">
@@ -2138,7 +2183,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                         <!-- 隧道管理 -->
                         <div class="function-section">
                             <div class="section-title">
-                                <span class="section-icon">🌐</span>
+                                <span class="section-icon section-icon-globe"></span>
                                 隧道管理
                             </div>
                             <div class="function-grid">
@@ -2180,7 +2225,7 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
                         <!-- 其他功能 -->
                         <div class="function-section">
                             <div class="section-title">
-                                <span class="section-icon">⚙️</span>
+                                <span class="section-icon section-icon-settings"></span>
                                 其他功能
                             </div>
                             <div class="function-grid">
