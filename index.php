@@ -343,6 +343,16 @@ if (isset($_SESSION['user_id'])) {
     $current_user = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+// 邮箱验证检查 - 未验证邮箱的用户只能访问验证页面
+$email_verify_required = ($site_settings['email_verify_required'] ?? '0') == '1';
+$allowed_actions = ['verify_email', 'verify_result', 'logout', 'resend_verify', 'forgot', 'reset_password'];
+if ($current_user && !$current_user['email_verified'] && $email_verify_required) {
+    if (!in_array($action, $allowed_actions) && $action != 'verify_result') {
+        header('Location: index.php?action=verify_email');
+        exit;
+    }
+}
+
 // 处理表单提交
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $post_action = $_POST['action'] ?? '';
@@ -2439,44 +2449,75 @@ remote_port = <?php echo htmlspecialchars($tunnel['remote_port']); ?></pre>
 
             <?php elseif ($action == 'verify_email'): ?>
                 <!-- 邮箱验证 -->
-                <div class="card" style="max-width:500px;">
-                    <div class="card-title">
-                        <span class="card-title-icon icon-email"></span>
-                        邮箱验证
-                    </div>
-                    
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-                    <?php endif; ?>
-                    
-                    <?php if (isset($success)): ?>
-                        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-                    <?php endif; ?>
-                    
-                    <?php if ($current_user['email_verified']): ?>
-                        <div style="text-align:center; padding: 30px 0;">
-                            <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
-                            <div style="font-size: 18px; font-weight: 600; color: var(--success-color); margin-bottom: 10px;">邮箱已验证</div>
-                            <div style="color: var(--text-secondary);">您的邮箱 <?php echo htmlspecialchars($current_user['email']); ?> 已成功验证</div>
+                <div class="verify-email-container">
+                    <div class="verify-email-card">
+                        <div class="verify-icon-wrapper">
+                            <span class="verify-email-icon"></span>
                         </div>
-                    <?php else: ?>
-                        <div style="text-align:center; padding: 20px 0 30px;">
-                            <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
-                            <div style="font-size: 18px; font-weight: 600; color: var(--warning-color); margin-bottom: 10px;">邮箱未验证</div>
-                            <div style="color: var(--text-secondary); margin-bottom: 20px;">
-                                当前邮箱：<?php echo htmlspecialchars($current_user['email']); ?><br>
-                                验证邮箱后可享受更多功能
+                        
+                        <h2 class="verify-title">
+                            <?php if ($current_user['email_verified']): ?>
+                                邮箱已验证
+                            <?php else: ?>
+                                请验证您的邮箱
+                            <?php endif; ?>
+                        </h2>
+                        
+                        <?php if (isset($error)): ?>
+                            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($success)): ?>
+                            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                        <?php endif; ?>
+                        
+                        <?php if ($current_user['email_verified']): ?>
+                            <div class="verify-success">
+                                <div class="verify-success-icon">✓</div>
+                                <p class="verify-email-text">
+                                    您的邮箱 <strong><?php echo htmlspecialchars($current_user['email']); ?></strong> 已成功验证
+                                </p>
+                                <a href="index.php?action=dashboard" class="btn btn-primary btn-large">进入控制台</a>
                             </div>
-                            
-                            <form method="post" action="" style="margin-top: 20px;">
-                                <input type="hidden" name="action" value="resend_verify">
-                                <button type="submit" class="btn btn-primary btn-large btn-block">重新发送验证邮件</button>
-                            </form>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div style="margin-top:20px;">
-                        <a href="index.php?action=profile" class="btn">← 返回个人中心</a>
+                        <?php else: ?>
+                            <div class="verify-content">
+                                <p class="verify-desc">
+                                    为了保障您的账号安全，使用系统前请先验证邮箱
+                                </p>
+                                
+                                <div class="verify-email-info">
+                                    <span class="verify-email-label">验证邮件已发送至：</span>
+                                    <span class="verify-email-address"><?php echo htmlspecialchars($current_user['email']); ?></span>
+                                </div>
+                                
+                                <div class="verify-tips">
+                                    <div class="tip-item">
+                                        <span class="tip-number">1</span>
+                                        <span>登录您的邮箱，查收验证邮件</span>
+                                    </div>
+                                    <div class="tip-item">
+                                        <span class="tip-number">2</span>
+                                        <span>点击邮件中的验证链接完成验证</span>
+                                    </div>
+                                    <div class="tip-item">
+                                        <span class="tip-number">3</span>
+                                        <span>验证成功后即可正常使用系统</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="verify-actions">
+                                    <form method="post" action="">
+                                        <input type="hidden" name="action" value="resend_verify">
+                                        <button type="submit" class="btn btn-primary btn-large btn-block">重新发送验证邮件</button>
+                                    </form>
+                                    
+                                    <div class="verify-footer">
+                                        <span>没收到邮件？</span>
+                                        <a href="javascript:void(0)" onclick="document.forms[0].submit(); return false;">点击重新发送</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
