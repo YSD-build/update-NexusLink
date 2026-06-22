@@ -6240,11 +6240,387 @@ a:hover {
 
 
 /* ============================================
-   移动端性能优化 - 修复组件闪退问题
+
+/* ============================================
+   移动端性能深度优化 - 不删减功能，只优化性能
    ============================================ */
 
-/* 移动端降低 backdrop-filter 强度，减少性能消耗 */
-@media (max-width: 768px) {
+/* 全局渲染优化 */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 所有卡片使用硬件加速层 */
+.stat-card-enhanced,
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.welcome-banner,
+.tunnel-stats-bar,
+.empty-state-enhanced,
+.node-stat-card,
+.glass-card,
+.card {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000px;
+    perspective: 1000px;
+    will-change: transform;
+}
+
+/* 优化 backdrop-filter 性能 */
+.stat-card-enhanced,
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.welcome-banner,
+.tunnel-stats-bar,
+.empty-state-enhanced,
+.node-stat-card {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: auto;
+}
+
+/* 装饰元素优化 - 使用独立层，不影响主体渲染 */
+.welcome-decoration,
+.deco-circle,
+.empty-icon-large::before {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* 动画优化 - 只使用 transform 和 opacity */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(0, 20px, 0);
+        transform: translate3d(0, 20px, 0);
+    }
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        -webkit-transform: translate3d(0, -20px, 0);
+        transform: translate3d(0, -20px, 0);
+    }
+    to {
+        opacity: 1;
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        -webkit-transform: translate3d(0, 0px, 0);
+        transform: translate3d(0, 0px, 0);
+    }
+    50% {
+        -webkit-transform: translate3d(0, -20px, 0);
+        transform: translate3d(0, -20px, 0);
+    }
+}
+
+@keyframes wave {
+    0%, 100% { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+    25% { -webkit-transform: rotate(20deg); transform: rotate(20deg); }
+    75% { -webkit-transform: rotate(-10deg); transform: rotate(-10deg); }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 4px rgba(24, 160, 88, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(24, 160, 88, 0.1);
+    }
+}
+
+@keyframes rotate {
+    from { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+}
+
+/* 悬浮动效优化 - 只使用 transform */
+.stat-card-enhanced:hover,
+.tunnel-card-enhanced:hover,
+.node-card-enhanced:hover,
+.quick-action-item:hover {
+    -webkit-transform: translate3d(0, -4px, 0);
+    transform: translate3d(0, -4px, 0);
+}
+
+/* 切换按钮优化 */
+.toggle-btn {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 32px;
+    min-width: 44px;
+}
+
+.toggle-thumb {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: left;
+}
+
+/* SVG 图标优化 */
+.stat-icon svg,
+.quick-action-icon svg,
+.card-title-icon svg,
+.tunnel-node-badge svg,
+.node-icon svg,
+.node-location-badge svg,
+.action-btn svg,
+.empty-icon-large svg,
+.feature-icon svg,
+.node-stat-icon svg {
+    display: block;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    pointer-events: none;
+}
+
+/* 进度条优化 */
+.progress-bar-mini,
+.progress-fill {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 卡片顶部装饰条优化 */
+.tunnel-card-topbar,
+.node-card-decoration,
+.stat-card-enhanced::before {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 确保文字渲染清晰 */
+.stat-number,
+.tunnel-name-enhanced,
+.node-name-enhanced,
+.welcome-username,
+.streak-number,
+.node-stat-number,
+.tunnel-stat-number {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* 触控设备优化 - 保持效果但优化性能 */
+@media (pointer: coarse) {
+    /* 触控设备降低动画帧率感知 */
+    .deco-circle-1 { animation-duration: 8s; }
+    .deco-circle-2 { animation-duration: 10s; }
+    .deco-circle-3 { animation-duration: 9s; }
+    
+    /* 触控设备优化悬浮效果 - 减少阴影变化 */
+    .stat-card-enhanced:hover,
+    .tunnel-card-enhanced:hover,
+    .node-card-enhanced:hover {
+        box-shadow: var(--glass-shadow);
+    }
+}
+
+/* 低性能设备检测 - 通过 prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 确保所有定位元素正确 */
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.stat-card-enhanced,
+.welcome-banner {
+    position: relative;
+    overflow: hidden;
+}
+
+/* 修复可能的层叠上下文问题 */
+.welcome-banner-content,
+.tunnel-card-main,
+.node-card-header,
+.stat-icon {
+    position: relative;
+    z-index: 1;
+}
+
+/* 确保表单提交不会导致闪烁 */
+form {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 按钮点击优化 */
+.btn,
+.action-btn,
+.quick-action-item {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 优化滚动性能 */
+.main-content,
+.sidebar {
+    -webkit-overflow-scrolling: touch;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+
+/* ============================================
+   闪退问题针对性修复
+   ============================================ */
+
+/* 防止组件意外消失 */
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.stat-card-enhanced,
+.welcome-banner,
+.tunnel-stats-bar,
+.empty-state-enhanced,
+.node-stat-card,
+.quick-action-item,
+.recent-tunnel-item {
+    visibility: visible;
+    opacity: 1;
+    display: block;
+}
+
+/* 确保 overflow 不会导致组件被裁剪 */
+.tunnel-card-main,
+.node-card-info,
+.stat-info,
+.checkin-content {
+    overflow: visible;
+}
+
+/* 修复 z-index 层级问题 */
+.welcome-banner {
+    z-index: 1;
+}
+
+.welcome-banner-bg {
+    z-index: 0;
+}
+
+.welcome-banner-content {
+    position: relative;
+    z-index: 2;
+}
+
+.welcome-decoration {
+    z-index: 1;
+}
+
+/* 确保装饰元素不会阻挡点击 */
+.deco-circle,
+.welcome-decoration,
+.node-card-decoration,
+.tunnel-card-topbar {
+    pointer-events: none;
+}
+
+/* 修复可能的 flex 布局问题 */
+.tunnel-card-actions,
+.action-buttons,
+.tunnel-status-indicator,
+.node-card-header,
+.card-header,
+.quick-action-item,
+.recent-tunnel-item {
+    min-width: 0;
+    min-height: 0;
+}
+
+/* 修复文字溢出导致的布局问题 */
+.tunnel-name-enhanced,
+.node-name-enhanced,
+.welcome-username,
+.stat-number,
+.streak-number {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+/* 确保表单元素正确显示 */
+.toggle-form,
+.toggle-btn,
+.toggle-track,
+.toggle-thumb {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* 修复切换按钮可能的显示问题 */
+.toggle-btn {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.toggle-track {
+    flex-shrink: 0;
+}
+
+/* 确保 SVG 图标不会消失 */
+svg {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    overflow: visible;
+}
+
+/* 修复渐变背景可能的渲染问题 */
+.stat-card-enhanced::before,
+.node-card-decoration,
+.tunnel-card-topbar {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 确保所有卡片内容都在正确的层 */
+.tunnel-card-main,
+.node-card-header,
+.node-card-info,
+.node-card-footer,
+.stat-icon,
+.stat-info,
+.stat-trend,
+.stat-progress {
+    position: relative;
+    z-index: 1;
+}
+
+/* 修复可能的 backdrop-filter 渲染问题 */
+@supports not (backdrop-filter: blur(10px)) {
     .glass-card,
     .card,
     .stat-card-enhanced,
@@ -6254,163 +6630,228 @@ a:hover {
     .tunnel-stats-bar,
     .empty-state-enhanced,
     .node-stat-card {
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        background: rgba(255, 255, 255, 0.9) !important;
+        background: rgba(255, 255, 255, 0.95);
     }
-    
-    /* 移动端禁用部分装饰元素，提升性能 */
-    .welcome-decoration,
-    .deco-circle,
-    .empty-icon-large::before {
-        display: none !important;
-    }
-    
-    /* 移动端简化动画 */
+}
+
+@supports not (-webkit-backdrop-filter: blur(10px)) {
+    .glass-card,
+    .card,
     .stat-card-enhanced,
     .tunnel-card-enhanced,
     .node-card-enhanced,
     .welcome-banner,
-    .empty-state-enhanced {
-        animation: none !important;
-    }
-    
-    /* 移动端禁用悬浮动效，减少重绘 */
-    .stat-card-enhanced:hover,
-    .tunnel-card-enhanced:hover,
-    .node-card-enhanced:hover,
-    .quick-action-item:hover {
-        transform: none !important;
-        box-shadow: var(--glass-shadow) !important;
-    }
-    
-    /* 移动端简化脉冲动画 */
-    .tunnel-status-dot.online,
-    .dot-online {
-        animation: none !important;
+    .tunnel-stats-bar,
+    .empty-state-enhanced,
+    .node-stat-card {
+        background: rgba(255, 255, 255, 0.95);
     }
 }
 
-/* 超小屏幕进一步优化 */
-@media (max-width: 480px) {
-    .glass-card,
-    .card,
-    .stat-card-enhanced,
-    .tunnel-card-enhanced,
-    .node-card-enhanced {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background: #ffffff !important;
-        border: 1px solid var(--border-color) !important;
-    }
-    
-    /* 小屏幕禁用所有非必要动画 */
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+/* 确保动画结束后保持状态 */
+.stat-card-enhanced,
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.welcome-banner,
+.empty-state-enhanced {
+    animation-fill-mode: both;
 }
 
-/* 修复切换按钮点击区域问题 */
-.toggle-btn {
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    min-height: 32px;
-    min-width: 44px;
+/* 修复可能的滚动导致的重绘问题 */
+.main-content {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: scroll-position;
 }
 
-/* 修复按钮点击反馈 */
-.action-btn,
-.btn {
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-
-/* 修复表单提交时的闪烁问题 */
-form {
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* 确保 SVG 图标在移动端正确显示 */
-svg {
-    flex-shrink: 0;
-}
-
-/* 修复移动端文字溢出问题 */
-.tunnel-name-enhanced,
-.node-name-enhanced,
-.welcome-username {
-    word-break: break-all;
-    overflow-wrap: break-word;
+/* 确保所有绝对定位元素正确显示 */
+[style*="position: absolute"],
+[style*="position:relative"] {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 
 /* ============================================
-   额外修复 - 确保稳定性
+   渲染稳定性深度优化
    ============================================ */
 
-/* 防止 overflow 导致的闪退 */
+/* 确保所有卡片在动画前后都保持可见 */
+.stat-card-enhanced,
 .tunnel-card-enhanced,
 .node-card-enhanced,
-.stat-card-enhanced {
-    overflow: hidden;
-    will-change: transform;
+.welcome-banner,
+.empty-state-enhanced,
+.node-stat-card,
+.tunnel-stats-bar {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* 动画结束后保持最终状态 */
+.fade-in-up,
+.fade-in-down {
+    animation-fill-mode: both;
+}
+
+/* 防止 backdrop-filter 导致的渲染闪烁 */
+@supports (backdrop-filter: blur(10px)) {
+    .stat-card-enhanced,
+    .tunnel-card-enhanced,
+    .node-card-enhanced,
+    .welcome-banner,
+    .tunnel-stats-bar,
+    .empty-state-enhanced,
+    .node-stat-card {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+}
+
+/* 确保渐变背景稳定渲染 */
+.stat-card-enhanced::before {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 修复可能的 flex 布局闪烁 */
+.dashboard-stats,
+.tunnel-grid-enhanced,
+.node-grid-enhanced,
+.dashboard-grid,
+.quick-actions,
+.recent-tunnels,
+.tunnel-stats-bar,
+.node-stats,
+.empty-features {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
 }
 
-/* 修复卡片顶部装饰条可能的渲染问题 */
-.tunnel-card-topbar,
-.node-card-decoration {
+/* 确保所有图标稳定显示 */
+.stat-icon,
+.quick-action-icon,
+.card-title-icon,
+.node-icon,
+.feature-icon,
+.node-stat-icon,
+.empty-icon-large {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    flex-shrink: 0;
 }
 
-/* 确保渐变背景正确渲染 */
-.stat-card-enhanced::before,
-.node-card-decoration {
+/* 防止文字渲染闪烁 */
+.page-title,
+.welcome-username,
+.stat-number,
+.streak-number,
+.tunnel-name-enhanced,
+.node-name-enhanced,
+.node-stat-number,
+.tunnel-stat-number,
+.empty-title {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    -webkit-font-smoothing: antialiased;
 }
 
-/* 修复 SVG 在某些浏览器的渲染问题 */
-.stat-icon svg,
-.quick-action-icon svg,
-.card-title-icon svg,
-.tunnel-node-badge svg,
-.node-icon svg,
-.node-location-badge svg,
-.action-btn svg {
-    display: block;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-}
-
-/* 确保进度条正确渲染 */
+/* 确保进度条稳定 */
 .progress-bar-mini,
 .progress-fill {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
-/* 桌面模式下的移动端优化（用户在手机上用电脑模式访问） */
-@media (max-width: 1024px) and (pointer: coarse) {
-    /* 触控设备降低模糊效果 */
-    .glass-card,
-    .card,
-    .stat-card-enhanced,
-    .tunnel-card-enhanced,
-    .node-card-enhanced {
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-    
-    /* 触控设备简化悬浮效果 */
-    .stat-card-enhanced:hover,
-    .tunnel-card-enhanced:hover,
-    .node-card-enhanced:hover {
-        transform: translateY(-2px);
-    }
+/* 切换按钮稳定性优化 */
+.toggle-btn,
+.toggle-track,
+.toggle-thumb {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 确保操作按钮稳定显示 */
+.action-btn,
+.action-buttons {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 防止滚动时的重绘闪烁 */
+.main-content::-webkit-scrollbar {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 确保所有伪元素正确渲染 */
+*::before,
+*::after {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 优化 contain 属性，限制重绘范围 */
+.tunnel-card-enhanced,
+.node-card-enhanced,
+.stat-card-enhanced {
+    contain: layout style paint;
+}
+
+/* 确保侧边栏和主内容区稳定 */
+.sidebar,
+.main-content {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* 修复可能的 z-index 层叠问题 */
+.card,
+.glass-card {
+    position: relative;
+    z-index: 1;
+}
+
+/* 确保表单元素正确渲染 */
+input,
+button,
+select,
+textarea {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* 按钮点击反馈优化 */
+.btn:active,
+.action-btn:active,
+.toggle-btn:active {
+    -webkit-transform: scale(0.98) translateZ(0);
+    transform: scale(0.98) translateZ(0);
+}
+
+/* 确保所有图片稳定显示 */
+img {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
