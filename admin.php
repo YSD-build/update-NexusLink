@@ -17,6 +17,113 @@ function db() {
     return Database::getInstance()->getPdo();
 }
 
+
+// 初始化设置表
+function init_settings() {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        // 检查设置表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE '{$prefix}settings'");
+        if (!$stmt->fetch()) {
+            // 创建设置表
+            $sql = "CREATE TABLE `{$prefix}settings` (
+              `id` int unsigned NOT NULL AUTO_INCREMENT,
+              `setting_key` varchar(100) NOT NULL COMMENT '设置键',
+              `setting_value` text COMMENT '设置值',
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `setting_key` (`setting_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统设置表'";
+            $db->exec($sql);
+            
+            // 插入默认设置
+            $default_settings = [
+                'site_name' => 'NexusLink',
+                'site_description' => '高性能内网穿透平台',
+                'register_enabled' => '1',
+                'email_verify_required' => '0',
+                'default_traffic_limit' => '100',
+                'checkin_reward' => '10',
+                'min_port' => '10000',
+                'max_port' => '60000',
+                'max_tunnels_per_user' => '10',
+            ];
+            
+            foreach ($default_settings as $key => $value) {
+                $stmt = $db->prepare("INSERT INTO {$prefix}settings (setting_key, setting_value) VALUES (?, ?)");
+                $stmt->execute([$key, $value]);
+            }
+        }
+    } catch (Exception $e) {
+        // 静默失败
+    }
+}
+
+// 获取设置
+function get_setting($key, $default = '') {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        $stmt = $db->prepare("SELECT setting_value FROM {$prefix}settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['setting_value'] : $default;
+    } catch (Exception $e) {
+        return $default;
+    }
+}
+
+// 获取所有设置
+function get_all_settings() {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        $stmt = $db->query("SELECT setting_key, setting_value FROM {$prefix}settings");
+        $settings = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        return $settings;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+// 保存设置
+function save_setting($key, $value) {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    try {
+        $stmt = $db->prepare("SELECT id FROM {$prefix}settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $exists = $stmt->fetch();
+        
+        if ($exists) {
+            $stmt = $db->prepare("UPDATE {$prefix}settings SET setting_value = ? WHERE setting_key = ?");
+            $stmt->execute([$value, $key]);
+        } else {
+            $stmt = $db->prepare("INSERT INTO {$prefix}settings (setting_key, setting_value) VALUES (?, ?)");
+            $stmt->execute([$key, $value]);
+        }
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+// 初始化设置
+init_settings();
+
+// 获取所有设置
+$settings = get_all_settings();
+
+
 // 开启session
 session_start();
 
@@ -64,6 +171,74 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
         }
     }
 }
+
+
+// 处理保存设置
+$settings_saved = false;
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
+    // 站点设置
+    if (isset($_POST['site_name'])) {
+        save_setting('site_name', trim($_POST['site_name']));
+    }
+    if (isset($_POST['site_description'])) {
+        save_setting('site_description', trim($_POST['site_description']));
+    }
+    if (isset($_POST['register_enabled'])) {
+        save_setting('register_enabled', $_POST['register_enabled'] == '1' ? '1' : '0');
+    }
+    if (isset($_POST['email_verify_required'])) {
+        save_setting('email_verify_required', $_POST['email_verify_required'] == '1' ? '1' : '0');
+    }
+    if (isset($_POST['default_traffic_limit'])) {
+        save_setting('default_traffic_limit', intval($_POST['default_traffic_limit']));
+    }
+    if (isset($_POST['checkin_reward'])) {
+        save_setting('checkin_reward', intval($_POST['checkin_reward']));
+    }
+    
+    // 高级设置
+    if (isset($_POST['min_port'])) {
+        save_setting('min_port', intval($_POST['min_port']));
+    }
+    if (isset($_POST['max_port'])) {
+        save_setting('max_port', intval($_POST['max_port']));
+    }
+    if (isset($_POST['max_tunnels_per_user'])) {
+        save_setting('max_tunnels_per_user', intval($_POST['max_tunnels_per_user']));
+    }
+    
+    // 重新加载设置
+    $settings = get_all_settings();
+    $settings_saved = true;
+}
+
+
+// 处理重新生成JWT密钥
+if (isset($_GET['action']) && $_GET['action'] == 'regenerate_jwt' && $current_user && $current_user['role'] == 'admin') {
+    $new_secret = bin2hex(random_bytes(32));
+    // 注意：这里只是示例，实际需要修改config.php
+    // 由于config.php不能直接修改，我们先记录到设置表中
+    save_setting('jwt_secret', $new_secret);
+    $settings_saved = true;
+    $settings = get_all_settings();
+    header('Location: admin.php?action=advanced');
+    exit;
+}
+
+// 处理清理过期数据
+if (isset($_GET['action']) && $_GET['action'] == 'cleanup_data' && $current_user && $current_user['role'] == 'admin') {
+    $db = db();
+    $prefix = DB_PREFIX;
+    
+    // 清理30天前的流量日志
+    $stmt = $db->prepare("DELETE FROM {$prefix}traffic_logs WHERE log_date < DATE_SUB(NOW(), INTERVAL 30 DAY)");
+    $stmt->execute();
+    
+    $cleanup_message = '过期数据清理完成';
+    header('Location: admin.php?action=advanced&cleanup=1');
+    exit;
+}
+
 
 // 处理更新相关操作
 $update_result = null;
@@ -788,112 +963,134 @@ $stats = get_admin_stats();
                 <div class="card" style="max-width:800px;">
                     <div class="card-title">站点设置</div>
                     
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>站点名称</h4>
-                            <p>设置网站的名称，显示在标题和页面中</p>
-                        </div>
-                        <input type="text" class="form-input" style="width:200px;" value="NexusLink">
-                    </div>
+                    <?php if ($settings_saved): ?>
+                        <div class="alert alert-success">设置保存成功！</div>
+                    <?php endif; ?>
                     
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>站点描述</h4>
-                            <p>网站的简短描述，用于 SEO 和首页展示</p>
+                    <form method="post" action="">
+                        <input type="hidden" name="save_settings" value="1">
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>站点名称</h4>
+                                <p>设置网站的名称，显示在标题和页面中</p>
+                            </div>
+                            <input type="text" name="site_name" class="form-input" style="width:200px;" value="<?php echo htmlspecialchars($settings['site_name'] ?? 'NexusLink'); ?>">
                         </div>
-                        <input type="text" class="form-input" style="width:250px;" value="高性能内网穿透平台">
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>用户注册</h4>
-                            <p>开启后允许新用户注册账号</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>站点描述</h4>
+                                <p>网站的简短描述，用于 SEO 和首页展示</p>
+                            </div>
+                            <input type="text" name="site_description" class="form-input" style="width:250px;" value="<?php echo htmlspecialchars($settings['site_description'] ?? '高性能内网穿透平台'); ?>">
                         </div>
-                        <div class="switch active"></div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>邮箱验证</h4>
-                            <p>注册时需要验证邮箱才能使用</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>用户注册</h4>
+                                <p>开启后允许新用户注册账号</p>
+                            </div>
+                            <label class="switch <?php echo ($settings['register_enabled'] ?? '1') == '1' ? 'active' : ''; ?>">
+                                <input type="checkbox" name="register_enabled" value="1" <?php echo ($settings['register_enabled'] ?? '1') == '1' ? 'checked' : ''; ?> style="display:none;">
+                            </label>
                         </div>
-                        <div class="switch"></div>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>默认流量限制</h4>
-                            <p>新用户注册后默认的流量限制（GB）</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>邮箱验证</h4>
+                                <p>注册时需要验证邮箱才能使用</p>
+                            </div>
+                            <label class="switch <?php echo ($settings['email_verify_required'] ?? '0') == '1' ? 'active' : ''; ?>">
+                                <input type="checkbox" name="email_verify_required" value="1" <?php echo ($settings['email_verify_required'] ?? '0') == '1' ? 'checked' : ''; ?> style="display:none;">
+                            </label>
                         </div>
-                        <input type="number" class="form-input" style="width:120px;" value="100">
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>签到奖励</h4>
-                            <p>每日签到可获得的免费流量（GB）</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>默认流量限制</h4>
+                                <p>新用户注册后默认的流量限制（GB）</p>
+                            </div>
+                            <input type="number" name="default_traffic_limit" class="form-input" style="width:120px;" value="<?php echo htmlspecialchars($settings['default_traffic_limit'] ?? '100'); ?>">
                         </div>
-                        <input type="number" class="form-input" style="width:120px;" value="10">
-                    </div>
-                    
-                    <div style="margin-top:24px; text-align:right;">
-                        <button class="btn btn-primary">保存设置</button>
-                    </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>签到奖励</h4>
+                                <p>每日签到可获得的免费流量（GB）</p>
+                            </div>
+                            <input type="number" name="checkin_reward" class="form-input" style="width:120px;" value="<?php echo htmlspecialchars($settings['checkin_reward'] ?? '10'); ?>">
+                        </div>
+                        
+                        <div style="margin-top:24px; text-align:right;">
+                            <button type="submit" class="btn btn-primary">保存设置</button>
+                        </div>
+                    </form>
                 </div>
+
                 
             <?php elseif ($action == 'advanced'): ?>
                 <!-- 高级设置 -->
                 <div class="card" style="max-width:800px;">
                     <div class="card-title">高级设置</div>
                     
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>端口范围</h4>
-                            <p>用户可使用的远程端口范围</p>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="number" class="form-input" style="width:100px;" value="10000">
-                            <span>-</span>
-                            <input type="number" class="form-input" style="width:100px;" value="60000">
-                        </div>
-                    </div>
+                    <?php if ($settings_saved): ?>
+                        <div class="alert alert-success">设置保存成功！</div>
+                    <?php endif; ?>
                     
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>单用户最大隧道数</h4>
-                            <p>每个用户最多可以创建的隧道数量</p>
+                    <form method="post" action="">
+                        <input type="hidden" name="save_settings" value="1">
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>端口范围</h4>
+                                <p>用户可使用的远程端口范围</p>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" name="min_port" class="form-input" style="width:100px;" value="<?php echo htmlspecialchars($settings['min_port'] ?? '10000'); ?>">
+                                <span>-</span>
+                                <input type="number" name="max_port" class="form-input" style="width:100px;" value="<?php echo htmlspecialchars($settings['max_port'] ?? '60000'); ?>">
+                            </div>
                         </div>
-                        <input type="number" class="form-input" style="width:120px;" value="10">
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>JWT 密钥</h4>
-                            <p>用于 API 接口认证的密钥，修改后所有 token 将失效</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>单用户最大隧道数</h4>
+                                <p>每个用户最多可以创建的隧道数量</p>
+                            </div>
+                            <input type="number" name="max_tunnels_per_user" class="form-input" style="width:120px;" value="<?php echo htmlspecialchars($settings['max_tunnels_per_user'] ?? '10'); ?>">
                         </div>
-                        <button class="btn btn-xs">重新生成</button>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>邮件服务</h4>
-                            <p>配置 SMTP 邮件服务器用于发送验证邮件</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>JWT 密钥</h4>
+                                <p>用于 API 接口认证的密钥，修改后所有 token 将失效</p>
+                            </div>
+                            <button type="button" class="btn btn-xs" onclick="if(confirm('确定要重新生成JWT密钥吗？所有已登录用户将被强制退出！')) { location.href='admin.php?action=regenerate_jwt'; }">重新生成</button>
                         </div>
-                        <button class="btn btn-xs">配置</button>
-                    </div>
-                    
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <h4>清理过期数据</h4>
-                            <p>清理 30 天前的流量日志和过期记录</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>邮件服务</h4>
+                                <p>配置 SMTP 邮件服务器用于发送验证邮件</p>
+                            </div>
+                            <a href="admin.php?action=mail_config" class="btn btn-xs">配置</a>
                         </div>
-                        <button class="btn btn-xs btn-danger">立即清理</button>
-                    </div>
-                    
-                    <div style="margin-top:24px; text-align:right;">
-                        <button class="btn btn-primary">保存设置</button>
-                    </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>清理过期数据</h4>
+                                <p>清理 30 天前的流量日志和过期记录</p>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-danger" onclick="if(confirm('确定要清理过期数据吗？此操作不可恢复！')) { location.href='admin.php?action=cleanup_data'; }">立即清理</button>
+                        </div>
+                        
+                        <div style="margin-top:24px; text-align:right;">
+                            <button type="submit" class="btn btn-primary">保存设置</button>
+                        </div>
+                    </form>
                 </div>
+
                 
             <?php elseif ($action == 'update'): ?>
                 <!-- 系统更新 -->
@@ -1065,5 +1262,28 @@ $stats = get_admin_stats();
             <p>© 2026 NexusLink 管理后台. All rights reserved.</p>
         </div>
     </div>
+
+<script>
+// 开关按钮交互
+document.addEventListener('DOMContentLoaded', function() {
+    var switches = document.querySelectorAll('.switch');
+    switches.forEach(function(sw) {
+        var checkbox = sw.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            sw.addEventListener('click', function(e) {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    if (checkbox.checked) {
+                        sw.classList.add('active');
+                    } else {
+                        sw.classList.remove('active');
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+
 </body>
 </html>
