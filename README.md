@@ -357,8 +357,15 @@ POST   /api/admin.php?action=user_delete
 
 ## 版本信息
 
-- 平台版本：v0.1.0
-- 适配 NexusLink 版本：v0.2.2.beta+
+- 平台版本：v0.10.1
+- 适配 NexusLink 版本：v0.3.1+（用户前台生成的 client.yaml 与 v0.3.1 客户端完全兼容）
+
+## 安全更新（v0.10.1）
+
+- **移除 `write_file.php`**：原脚本仅以固定密码即可写入任意文件（Web 根目录内），等价于远程代码执行后门，已从仓库删除。
+- **`update.php` 改为安全更新入口**：原脚本会在任意请求下从第三方 CDN（`aka.doubaocdn.com`）覆盖 `index.php`，存在供应链投毒风险；现已改为仅接受 POST + `UPDATE_KEY` 密钥（`hash_equals` 校验），并复用 `api/updater.php` 的 `Updater` 类，更新源固定为本项目 GitHub Release（依赖 `api/config.php` 中的 `UPDATE_KEY` / `GITHUB_REPO`）。
+- **`.htaccess` 加固**：禁止 Web 直接访问 `config.php` / `*.sql`；增加 `X-Content-Type-Options` / `X-Frame-Options` / `Referrer-Policy` / `Permissions-Policy` 响应头（HTTPS 就绪后取消注释 HSTS）。
+- 仍建议：修改默认管理员密码 `admin/admin123`、修改 `JWT_SECRET`、为 `/api/` 与后台启用 HTTPS（当前 HTTPS 未挂载 `/api`、`/admin.php`，请勿在服务器端配置就绪前强制跳转）。
 
 ## License
 

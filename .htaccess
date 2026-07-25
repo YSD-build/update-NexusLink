@@ -30,3 +30,20 @@
   ExpiresByType image/jpeg "access plus 1 year"
   ExpiresByType image/svg+xml "access plus 1 year"
 </IfModule>
+
+# ============ 安全加固 ============
+# 禁止直接通过 Web 访问敏感文件（配置 / 数据库脚本 / 已废弃工具脚本）
+# 注意：api/*.php 通过文件系统 require 包含 config.php，不受影响；此处只挡 HTTP 直接请求。
+<FilesMatch "(^|/)(config\.php|\.sql|write_file\.php)$">
+    Require all denied
+</FilesMatch>
+
+# 基础安全响应头
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # 启用 HTTPS 后请解除注释以下行（HSTS）：
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
