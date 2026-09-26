@@ -107,40 +107,6 @@ function writeUpdateState(array $s): void {
     @file_put_contents(updateStateFile(), json_encode($s, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 }
 
-/**
- * 语义版本比较。
- * 返回 1 表示 $a 比 $b 新，-1 表示更旧，0 表示相等。
- *
- * 【为什么需要它】
- * 原实现只判断 $remote !== $current 就报「有新版本」。这会把降级误判成升级：
- * 例如本地 1.0.4、更新源错误地指向旧 tag（远端 1.0.3）时，界面会显示
- * 「有新版本 1.0.4 → 1.0.3」，用户一点就把系统退回旧版。
- * 支持 1.0.4 / 1.0.4-test / v1.0.4 等形式，非数字后缀按预发布处理（小于正式版）。
- */
-function versionCompare(string $a, string $b): int {
-    $norm = function (string $v): array {
-        $v = ltrim(trim($v), 'vV');
-        $main = $v; $pre = '';
-        if (($pos = strpos($v, '-')) !== false) {
-            $main = substr($v, 0, $pos);
-            $pre  = substr($v, $pos + 1);
-        }
-        $nums = array_map('intval', explode('.', $main));
-        while (count($nums) < 3) { $nums[] = 0; }
-        return [$nums, $pre];
-    };
-    [$na, $pa] = $norm($a);
-    [$nb, $pb] = $norm($b);
-    for ($i = 0; $i < 3; $i++) {
-        if ($na[$i] !== $nb[$i]) { return $na[$i] < $nb[$i] ? -1 : 1; }
-    }
-    // 数字段相同：无预发布后缀的更大（1.0.4 > 1.0.4-rc1）
-    if ($pa === $pb) { return 0; }
-    if ($pa === '')  { return 1; }
-    if ($pb === '')  { return -1; }
-    return strcmp($pa, $pb) <=> 0;
-}
-
 /** 当前已部署的版本号（读 public/build-meta.json） */
 function currentBuildVersion(): string {
     $f = __DIR__ . '/build-meta.json';
