@@ -862,7 +862,11 @@ if ($resource === 'update') {
             'success'        => true,
             'currentVersion' => $current,
             'remoteVersion'  => $remote,
-            'hasUpdate'      => $remote !== '' && $remote !== $current,
+            // 【修复】改为按语义版本比较大小，而不是简单判断「不相等」。
+            // 只判断不等会把降级也报成「有新版本」（如本地 1.0.4、远端 1.0.3），
+            // 用户误点会把系统退回旧版，重新引入已修复的 BUG。
+            'hasUpdate'      => $remote !== '' && versionCompare($remote, $current) > 0,
+            'isDowngrade'    => $remote !== '' && $current !== '' && versionCompare($remote, $current) < 0,
             'publishedAt'    => (string) ($m['publishedAt'] ?? ''),
             'notes'          => (string) ($m['notes'] ?? ''),
             'fileCount'      => count($m['files']),

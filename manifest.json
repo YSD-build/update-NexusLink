@@ -4,14 +4,14 @@
   "version": "1.0.4",
   "channel": "stable",
   "publishedAt": "2026-09-26T09:15:20Z",
-  "notes": "v1.0.4 修复：更新白名单遗漏 index.php/health.php、storage 可写性误判、版本号读取错误；新增 selfheal.php 一键自助修复脚本",
+  "notes": "v1.0.4 修复：更新白名单遗漏 index.php/health.php、storage 可写性误判、版本号读取错误、降级误判为升级；新增 selfheal.php 一键自助修复脚本",
   "baseUrl": "",
   "fileCount": 16,
-  "totalBytes": 1936372,
+  "totalBytes": 1938154,
   "files": {
     "api.php": {
-      "sha256": "b77ede4f400c1e1a55321d212aebf0e0666e4c4421271d2598685735306f4c4f",
-      "size": 36245
+      "sha256": "2fa23b66681ea06d4f359ae2f50ca701093f67b0612bc63a6ccc7b4db18913fc",
+      "size": 36668
     },
     "assets/core-aqBwM8sQ.js": {
       "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
@@ -70,8 +70,8 @@
       "size": 114799
     },
     "updater.php": {
-      "sha256": "b1522e5b0e2f6b4247e9dc850298ab1f65219e043c4b6125cb1f3b884833007c",
-      "size": 21471
+      "sha256": "f5fc01cc5b885992b8edaa27ad7266181e8b3d48dfae0634af4ee00f6633338b",
+      "size": 22830
     }
   },
   "builtAt": "2026-09-26T09:15:20Z"
