@@ -818,8 +818,16 @@ if ($resource === 'update') {
             'env' => [
                 'zipArchive' => class_exists('ZipArchive'),
                 'curl'       => function_exists('curl_init'),
-                'storageWritable' => is_writable(dirname(__DIR__) . '/storage')
-                    || @mkdir(dirname(__DIR__) . '/storage', 0755, true),
+                // 【修复】扁平结构下 api.php 就在站点根目录，storage/ 与它同级。
+                // 原代码用 dirname(__DIR__) 会指向站点根目录的上一级（如 /www/wwwroot/），
+                // 那里没有 storage/，导致此项恒为 false —— 权限即使正常也显示「不可写」。
+                'storageWritable' => (function () {
+                    $root = __DIR__;
+                    $s = $root . '/storage';
+                    ensureStorageDirs();
+                    return is_dir($s) && is_writable($s);
+                })(),
+                'storage'    => diagnoseStorage(),
                 'opcache'    => function_exists('opcache_reset'),
             ],
         ]);
@@ -843,7 +851,13 @@ if ($resource === 'update') {
         }
         $m       = $r['manifest'];
         $current = currentBuildVersion();
-        $remote  = (string) ($m['version'] ?? '');
+        // 【修复】远端版本优先取 appVersion，回退 version。
+        // 历史上 build-meta.json 的 version 被构建脚本写成 git 短哈希，
+        // 与本地同一个哈希比对时必然「相等」，导致明明有新版本却报「已是最新」。
+        $remote  = (string) ($m['appVersion'] ?? '');
+        if ($remote === '') {
+            $remote = (string) ($m['version'] ?? '');
+        }
         respond([
             'success'        => true,
             'currentVersion' => $current,

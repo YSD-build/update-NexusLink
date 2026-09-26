@@ -24,7 +24,7 @@ function updateStateFile(): string {
     return __DIR__ . '/storage/update-state.json';
 }
 
-/** 可写目录准备 */
+/** 可写目录准备（含权限自愈） */
 function ensureStorageDirs(): array {
     $root = __DIR__;
     $dirs = [
@@ -37,7 +37,58 @@ function ensureStorageDirs(): array {
             @mkdir($d, 0755, true);
         }
     }
+    // 【修复】自愈权限：宝塔/虚拟主机下目录常属主为 www 而 PHP 以 www 运行，
+    // 但上传解压后可能变成 root:root 0644，此时 storage/ 不可写，
+    // 会导致更新状态无法保存、备份失败，面板显示「storage 可写：不可写」。
+    // 这里在检测到不可写时主动尝试 chmod 0775；失败则由调用方报出真实原因。
+    foreach ($dirs as $d) {
+        if (is_dir($d) && !is_writable($d)) {
+            @chmod($d, 0775);
+        }
+    }
     return $dirs;
+}
+
+/**
+ * 诊断 storage 目录可写性，返回可读结论（供面板展示，避免只给一个红点）。
+ * 逐级检查，明确指出是哪个目录、什么原因导致不可写。
+ */
+function diagnoseStorage(): array {
+    $root  = __DIR__;
+    $items = [
+        ['storage',          $root . '/storage'],
+        ['storage/backup',   $root . '/storage/backup'],
+        ['storage/packages', $root . '/storage/packages'],
+    ];
+    $checks  = [];
+    $allOk   = true;
+    foreach ($items as [$label, $path]) {
+        $exists = is_dir($path);
+        $writ   = $exists ? is_writable($path) : false;
+        $owner  = $exists ? (@fileowner($path) !== false ? (string) @posix_getpwuid(@fileowner($path))['name'] : '?') : '-';
+        $perms  = $exists ? substr(sprintf('%o', @fileperms($path)), -4) : '-';
+        $ok     = $exists && $writ;
+        if (!$ok) { $allOk = false; }
+        $checks[] = [
+            'path'   => $label,
+            'exists' => $exists,
+            'writable' => $writ,
+            'owner'  => $owner,
+            'perms'  => $perms,
+            'ok'     => $ok,
+            'hint'   => $ok ? '' : (!$exists
+                ? '目录不存在，且无法自动创建（父目录不可写）'
+                : "目录存在但不可写（属主 {$owner}，权限 {$perms}）。"
+                  . '请在宝塔中把该目录属主设为 PHP 运行用户（通常 www），权限 755。'),
+        ];
+    }
+    return [
+        'ok'      => $allOk,
+        'root'    => $root,
+        'phpUser' => function_exists('posix_getpwuid') && function_exists('posix_geteuid')
+            ? (string) (posix_getpwuid(posix_geteuid())['name'] ?? '?') : '?',
+        'checks'  => $checks,
+    ];
 }
 
 /** 读取本地状态（上次更新版本等） */
@@ -63,7 +114,19 @@ function currentBuildVersion(): string {
         return '';
     }
     $j = json_decode((string) file_get_contents($f), true);
-    return is_array($j) ? (string) ($j['version'] ?? '') : '';
+    if (!is_array($j)) {
+        return '';
+    }
+    // 【修复】优先读 appVersion（语义版本），再回退 version。
+    // 历史上 version 字段被构建脚本写成 git 短哈希，直接读它会让界面显示
+    // 形如 89a502cf1d79 的构建号而不是 1.0.3，用户无法判断版本。
+    $v = (string) ($j['appVersion'] ?? '');
+    if ($v !== '') {
+        return $v;
+    }
+    // 回退：若 version 看起来像语义版本（含点号）才用，否则不显示哈希
+    $legacy = (string) ($j['version'] ?? '');
+    return strpos($legacy, '.') !== false ? $legacy : '';
 }
 
 /** 拒绝路径穿越：解析后的绝对路径必须落在允许的根内 */
@@ -113,13 +176,11 @@ function safeTargetPath(string $relative, string $allowedRoot): ?string {
  */
 function isProtectedFile(string $rel): bool {
     $rel = ltrim(str_replace('\\', '/', $rel), '/');
-    $protected = [
-        'config.php',       // 数据库口令
-        'db.php',           // 核心库，随版本走（不保护会有半截更新风险）
-        'api.php',
-        'updater.php',
-    ];
-    // config.php 绝对不可覆盖；其余核心文件允许更新但走白名单逻辑
+    // 【修复】删除误导性的 $protected 死数组（原来定义了 4 个文件却只 return config.php）。
+    // 扁平结构下唯一绝对禁止覆盖的文件就是 config.php —— 它含数据库口令，
+    // 且必须由站长自行维护，任何更新源都不得触碰。
+    // 其余核心文件（index.php / api.php / db.php / updater.php / health.php）
+    // 均由 isAllowedRootFile() 白名单 + safeTargetPath() 路径校验共同管控。
     return $rel === 'config.php';
 }
 
@@ -398,13 +459,19 @@ function listLocalPackages(): array {
  */
 function isAllowedRootFile(string $name): bool {
     return in_array($name, [
+        // 前端产物
         'index.html',
         'build-meta.json',
         'favicon.svg',
         'icons.svg',
+        // 后端入口与核心库（随版本走）
+        'index.php',        // 【修复】主入口，之前遗漏导致更新被静默跳过
         'api.php',
         'db.php',
         'updater.php',
+        'health.php',       // 【修复】部署自检页
+        // 发布清单本身（在线更新时用于比对，不落盘也无妨，但允许覆盖便于排查）
+        'manifest.json',
     ], true);
 }
 

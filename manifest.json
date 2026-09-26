@@ -1,0 +1,73 @@
+{
+  "app": "lantian-tunnel",
+  "appVersion": "1.0.3",
+  "version": "1.0.3",
+  "channel": "stable",
+  "publishedAt": "2026-09-26T09:06:36Z",
+  "notes": "v1.0.3 修复：更新白名单遗漏 index.php/health.php、版本号读取错误、storage 目录自愈",
+  "baseUrl": "",
+  "fileCount": 15,
+  "totalBytes": 1818773,
+  "files": {
+    "api.php": {
+      "sha256": "7cee5accce832560c73d5e966c2cea41cc631031b3b96f1798c03996274c825b",
+      "size": 35756
+    },
+    "assets/core-aqBwM8sQ.js": {
+      "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
+      "size": 94743
+    },
+    "assets/index-YuboNW4h.js": {
+      "sha256": "e07866fa877753e1ce9f6a13e5cb24d7c568b3aa08bdcc174fb3072453c7269e",
+      "size": 13391
+    },
+    "assets/libs-ByMrdxRv.js": {
+      "sha256": "e04405fa596bce7860a5d657fbecbb19e55a91fd1e37d65ed9473bb27a140fc2",
+      "size": 50055
+    },
+    "assets/style-Di8oJJXi.css": {
+      "sha256": "113545f5de0b8e2673d5547bedb9a81a0d68099306d5a19f259d8b543b6e4e18",
+      "size": 50328
+    },
+    "assets/ui-DcSUubrd.js": {
+      "sha256": "5c26500422b0f8753439ef08789db01db7c4953134374d9d3e70af2c40235253",
+      "size": 1406013
+    },
+    "assets/views-Bq43zFPP.js": {
+      "sha256": "d659c2391e3bee7230f816bfb2a690c133642e1ac5ad7987b82da3bede7155ae",
+      "size": 116216
+    },
+    "build-meta.json": {
+      "sha256": "b1a9166378b4e36f762e405655e88e7b85627eb2ead75d8007a781e8f7a831fd",
+      "size": 529
+    },
+    "db.php": {
+      "sha256": "5561b539db3ca1e8be9d8950817262b8c5ffe3a4e8ee105dc563f3b2afc1a836",
+      "size": 5810
+    },
+    "favicon.svg": {
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "size": 9522
+    },
+    "health.php": {
+      "sha256": "97cff660558fc5ba5c64f639de8f275fb1e8c5c6a6b4a645ac3813b1fe5e2ec5",
+      "size": 6523
+    },
+    "icons.svg": {
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "size": 5031
+    },
+    "index.html": {
+      "sha256": "1d619ae09d56a3c81c825f3c102915b6187167646baa0d3755ee70d10ad19035",
+      "size": 889
+    },
+    "index.php": {
+      "sha256": "b364a68c3b274e60866373301fc525e6aabe73c49a4e5ea1365752937cc3967a",
+      "size": 4766
+    },
+    "updater.php": {
+      "sha256": "6ea98cc7f08eb10cf70e2cff7b87ac65a82ae313c2cf899f1cec0f69e84ab1e7",
+      "size": 19201
+    }
+  }
+}
