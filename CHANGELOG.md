@@ -6,6 +6,66 @@
 
 ---
 
+## Beta 1.1.3
+
+**主题：更新源多 CDN 镜像热备（国内访问更稳）**
+
+### 新增
+
+- **清单与文件下载支持多源依次回退**。
+
+  jsDelivr 本身是全球加速（背后是 Fastly + Cloudflare + Gcore 三套 CDN），
+  但它对国内用户的致命问题是**解析不稳定** —— `cdn.jsdelivr.net` 在不同
+  省份会解析到 `151.101.x`（Fastly）或 `104.17.x`（Cloudflare），
+  其中部分 IP 段被污染，表现为连接超时或 TLS 中断。
+
+  官方为此提供了多个**同源镜像域名**，内容完全一致、只是解析路径不同：
+
+  | 域名 | 背后 CDN |
+  | --- | --- |
+  | `fastly.jsdelivr.net` | 固定走 Fastly |
+  | `testingcf.jsdelivr.net` | 固定走 Cloudflare |
+  | `cdn.jsdelivr.net` | 官方自动选择 |
+  | `gcore.jsdelivr.net` | 固定走 Gcore |
+
+  新增 `withMirrorFallback()`，对清单和每个文件都**依次尝试**这些源，
+  第一个成功的即采用。单源超时也从「等满 15 秒」改为
+  「连接阶段最多 6~8 秒」，坏源能被快速跳过：
+
+  ```
+  fastly.jsdelivr.net      OK 989ms        ← 首选命中，不再试其他
+  bad-mirror.example.invalid FAIL 11ms     ← 坏源快速失败
+  testingcf.jsdelivr.net   OK 2258ms       ← 自动切到这里
+  ```
+
+  这是实测输出。第一个源可用时不会产生额外延迟；不可用时才回退。
+
+- **新增配置项 `update.manifest_mirrors`**，可自定义镜像顺序：
+
+  ```php
+  // 只固定用某一个（比如实测你那边 gcore 最快）
+  'manifest_mirrors' => ['gcore.jsdelivr.net'],
+  ```
+
+  不配置则用内置默认顺序，所以**老用户升级后自动获得多源能力**，
+  不改配置也能生效。只有 `manifest_url` 是 jsDelivr 地址时才启用镜像；
+  自建静态空间等地址没有镜像概念，直接单源请求。
+
+### 修复
+
+- **文件下载的校验失败会换源重试**。
+  原实现遇到 `CHECKSUM_MISMATCH` 直接失败。但 CDN 缓存了旧内容时，
+  换个源就能拿到正确文件 —— 现在尺寸不符或 sha256 不符都会继续尝试
+  下一个源，而不是立刻报错退出。
+
+### 说明
+
+- 多源只解决「**源站可达性**」。如果节点服务器本身到 jsDelivr 全都不通
+  （如纯内网环境），仍需改用自建静态空间，配置 `manifest_url` 指向
+  自己的地址即可 —— 此时镜像列表不生效（按设计）。
+
+---
+
 ## Beta 1.1.2
 
 **主题：修好 IPv6 节点无法探测**

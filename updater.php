@@ -247,90 +247,263 @@ function bustCdnCache(string $url): string {
     return $url . $sep . 't=' . time();
 }
 
-function fetchManifest(string $url, int $timeout = 15): array {
-    $url  = bustCdnCache($url);
-    $hdr  = cacheBustHeaders();
-    $raw  = false;
+/* ==================== 多源镜像（国内加速） ==================== */
 
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
-            CURLOPT_HTTPHEADER     => $hdr,
-        ]);
-        $raw = curl_exec($ch);
-        curl_close($ch);
-    } else {
-        $ctx = stream_context_create(['http' => [
-            'timeout' => $timeout,
-            'header'  => "User-Agent: LantianUpdater/1.0\r\n" . implode("\r\n", $hdr) . "\r\n",
-        ]]);
-        $raw = @file_get_contents($url, false, $ctx);
+/**
+ * 把 jsDelivr 的 gh 地址按指定镜像替换。
+ *
+ * 【为什么需要】
+ * jsDelivr 本身是全球加速（Fastly + Cloudflare + Gcore 三套 CDN 组合），
+ * 但它对国内用户的致命问题是：**解析不稳定**。
+ * cdn.jsdelivr.net 在不同省份会解析到 151.101.x（Fastly）或 104.17.x
+ * （Cloudflare），其中部分 IP 段被污染，表现为连接超时或 TLS 中断。
+ *
+ * 官方为此提供了多个同源镜像域名，内容完全一致、只是解析路径不同：
+ *   cdn.jsdelivr.net        自动选择（可能是 Fastly 或 CF）
+ *   fastly.jsdelivr.net     固定走 Fastly
+ *   gcore.jsdelivr.net      固定走 Gcore
+ *   testingcf.jsdelivr.net  固定走 Cloudflare
+ *
+ * 不同网络环境下哪个最快完全不同，所以正确做法是**多源依次尝试**，
+ * 第一个成功的就用，而不是赌某一个。
+ *
+ * @param string $url    原始清单/文件地址
+ * @param string $mirror 镜像主机名；空字符串 = 保持原样
+ */
+function applyMirror(string $url, string $mirror): string {
+    if ($mirror === '') {
+        return $url;
     }
-    if ($raw === false) {
-        return ['ok' => false, 'error' => 'MANIFEST_UNREACHABLE'];
-    }
-    $j = json_decode($raw, true);
-    if (!is_array($j) || empty($j['files']) || !is_array($j['files'])) {
-        return ['ok' => false, 'error' => 'MANIFEST_INVALID'];
-    }
-    return ['ok' => true, 'manifest' => $j];
+    // 只处理 jsDelivr 官方域名，自建空间/其他 CDN 不动
+    return preg_replace(
+        '~^https?://(?:cdn|fastly|gcore|testingcf|testingrs)\.jsdelivr\.net/~i',
+        'https://' . $mirror . '/',
+        $url
+    );
 }
 
-/** 下载单个文件到临时目录并校验 sha256 */
-function downloadFile(string $url, string $expectSha, int $expectSize = 0, int $timeout = 30): array {
-    $tmp = tempnam(sys_get_temp_dir(), 'lt_upd_');
-    if ($tmp === false) {
-        return ['ok' => false, 'error' => 'TEMP_UNAVAILABLE'];
-    }
-    $fp = @fopen($tmp, 'wb');
-    if (!$fp) {
-        return ['ok' => false, 'error' => 'TEMP_UNWRITABLE'];
+/**
+ * 取「清单地址 → 镜像地址列表」，第一个是首选源。
+ *
+ * 配置来源（config.php 的 update 段）：
+ *   'manifest_mirrors' => ['cdn.jsdelivr.net', 'fastly.jsdelivr.net', ...]
+ *
+ * 未配置时给一套默认顺序 —— 让老用户升级后自动获得多源能力，
+ * 不需要改配置。顺序按「国内实测最稳」排：
+ *   1. fastly   —— 固定节点，不易被 DNS 污染影响
+ *   2. testingcf—— 固定走 Cloudflare
+ *   3. cdn      —— 官方自动选择
+ *   4. gcore    —— 固定走 Gcore
+ *
+ * @return string[] 去掉重复与空值后的镜像主机名列表
+ */
+function manifestMirrors(): array {
+    $cfg  = cfg();
+    $user = $cfg['update']['manifest_mirrors'] ?? null;
+
+    if (is_array($user) && $user) {
+        $list = $user;
+    } else {
+        $list = [
+            'fastly.jsdelivr.net',
+            'testingcf.jsdelivr.net',
+            'cdn.jsdelivr.net',
+            'gcore.jsdelivr.net',
+        ];
     }
 
-    $ok = false;
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_FILE           => $fp,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
-            CURLOPT_HTTPHEADER     => cacheBustHeaders(),
-        ]);
-        $ok = curl_exec($ch);
-        curl_close($ch);
-    } else {
-        $data = @file_get_contents($url);
-        if ($data !== false) {
-            $ok = fwrite($fp, $data) !== false;
+    $out = [];
+    foreach ($list as $m) {
+        $m = trim((string) $m);
+        if ($m !== '' && !in_array($m, $out, true)) {
+            $out[] = $m;
         }
     }
-    fclose($fp);
+    return $out; // 已去重
+}
 
-    if (!$ok) {
-        @unlink($tmp);
-        return ['ok' => false, 'error' => 'DOWNLOAD_FAILED'];
+/**
+ * 从字面量 URL 里抽出一个「可作为镜像替换基准」的地址。
+ *
+ * 用于文件下载：manifest 里的文件地址是从清单 URL 派生出来的，
+ * 可能已经是某个镜像的域名。我们要把它统一回 cdn.jsdelivr.net 基准，
+ * 再按镜像列表逐个替换，否则换镜像时不会生效。
+ */
+function normalizeToBaseMirror(string $url): string {
+    return preg_replace(
+        '~^https?://(?:fastly|gcore|testingcf|testingrs)\.jsdelivr\.net/~i',
+        'https://cdn.jsdelivr.net/',
+        $url
+    );
+}
+
+/**
+ * 带镜像回退的 GET：依次尝试每个源，第一个成功即返回。
+ *
+ * @param string   $url      基准地址（通常含 cdn.jsdelivr.net）
+ * @param callable $attempt  签名 fn(string $candidateUrl): mixed
+ *                           返回非 false 视为成功
+ * @param string[] $mirrors  镜像主机名列表
+ * @param int      $perTry   单次超时（秒）
+ * @return array{ok:bool, value:mixed, mirror:string, error:string, tried:array}
+ */
+function withMirrorFallback(string $url, callable $attempt, array $mirrors, int $perTry = 15): array {
+    $base  = normalizeToBaseMirror($url);
+    $tried = [];
+
+    foreach ($mirrors as $m) {
+        $candidate = applyMirror($base, $m);
+        $t0 = microtime(true);
+        $r  = $attempt($candidate, $perTry);
+        $ms = (int) round((microtime(true) - $t0) * 1000);
+
+        if ($r !== false) {
+            $tried[] = ['mirror' => $m, 'ok' => true, 'ms' => $ms];
+            return ['ok' => true, 'value' => $r, 'mirror' => $m, 'error' => '', 'tried' => $tried];
+        }
+        $tried[] = ['mirror' => $m, 'ok' => false, 'ms' => $ms];
     }
 
-    $size = filesize($tmp);
-    if ($expectSize > 0 && $size !== $expectSize) {
-        @unlink($tmp);
-        return ['ok' => false, 'error' => 'SIZE_MISMATCH', 'expect' => $expectSize, 'actual' => $size];
+    return ['ok' => false, 'value' => null, 'mirror' => '', 'error' => 'ALL_MIRRORS_FAILED', 'tried' => $tried];
+}
+
+function fetchManifest(string $url, int $timeout = 15): array {
+    $hdr = cacheBustHeaders();
+
+    // 单次尝试：返回解码后的数组，失败返回 false
+    $once = function (string $candidate, int $t) use ($hdr) {
+        $u   = bustCdnCache($candidate);
+        $raw = false;
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($u);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => min(6, $t), // 连接阶段别等满超时
+                CURLOPT_TIMEOUT        => $t,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
+                CURLOPT_HTTPHEADER     => $hdr,
+            ]);
+            $raw = curl_exec($ch);
+            curl_close($ch);
+        } else {
+            $ctx = stream_context_create(['http' => [
+                'timeout' => $t,
+                'header'  => "User-Agent: LantianUpdater/1.0\r\n" . implode("\r\n", $hdr) . "\r\n",
+            ]]);
+            $raw = @file_get_contents($u, false, $ctx);
+        }
+
+        if ($raw === false) {
+            return false;
+        }
+        $j = json_decode($raw, true);
+        if (!is_array($j) || empty($j['files']) || !is_array($j['files'])) {
+            return false; // 内容不合法也换下一个源，可能是被劫持返回的错误页
+        }
+        return $j;
+    };
+
+    $mirrors = manifestMirrors();
+
+    // 非 jsDelivr 地址（自建静态空间等）没有镜像概念，直接单源请求
+    $isJsdelivr = (bool) preg_match('~^https?://(?:cdn|fastly|gcore|testingcf|testingrs)\.jsdelivr\.net/~i', $url);
+    if (!$isJsdelivr) {
+        $j = $once($url, $timeout);
+        return $j === false
+            ? ['ok' => false, 'error' => 'MANIFEST_UNREACHABLE']
+            : ['ok' => true, 'manifest' => $j];
     }
 
-    $sha = hash_file('sha256', $tmp);
-    if ($expectSha !== '' && !hash_equals(strtolower($expectSha), strtolower((string) $sha))) {
-        @unlink($tmp);
-        return ['ok' => false, 'error' => 'CHECKSUM_MISMATCH', 'expect' => $expectSha, 'actual' => $sha];
+    $r = withMirrorFallback($url, $once, $mirrors, $timeout);
+    if (!$r['ok']) {
+        return ['ok' => false, 'error' => 'MANIFEST_UNREACHABLE', 'tried' => $r['tried']];
     }
 
-    return ['ok' => true, 'tmp' => $tmp, 'size' => $size, 'sha256' => $sha];
+    return [
+        'ok'       => true,
+        'manifest' => $r['value'],
+        'mirror'   => $r['mirror'],   // 哪个源成功，前端可展示
+        'tried'    => $r['tried'],
+    ];
+}
+
+/** 下载单个文件到临时目录并校验 sha256（支持多源回退） */
+function downloadFile(string $url, string $expectSha, int $expectSize = 0, int $timeout = 30): array {
+    $hdr = cacheBustHeaders();
+
+    // 单次尝试：成功（下载+校验通过）返回数组，失败返回 false
+    $once = function (string $candidate, int $t) use ($hdr, $expectSha, $expectSize) {
+        $u  = bustCdnCache($candidate);
+        $tmp = tempnam(sys_get_temp_dir(), 'lt_upd_');
+        if ($tmp === false) {
+            return false;
+        }
+        $fp = @fopen($tmp, 'wb');
+        if (!$fp) {
+            @unlink($tmp);
+            return false;
+        }
+
+        $ok = false;
+        if (function_exists('curl_init')) {
+            $ch = curl_init($u);
+            curl_setopt_array($ch, [
+                CURLOPT_FILE           => $fp,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => min(8, $t),
+                CURLOPT_TIMEOUT        => $t,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
+                CURLOPT_HTTPHEADER     => $hdr,
+            ]);
+            $ok = curl_exec($ch);
+            curl_close($ch);
+        } else {
+            $data = @file_get_contents($u);
+            if ($data !== false) {
+                $ok = fwrite($fp, $data) !== false;
+            }
+        }
+        fclose($fp);
+
+        if (!$ok) {
+            @unlink($tmp);
+            return false;
+        }
+
+        $size = filesize($tmp);
+        if ($expectSize > 0 && $size !== $expectSize) {
+            @unlink($tmp);
+            return false; // 尺寸不符 → 可能被劫持/截断，换源重试
+        }
+
+        $sha = hash_file('sha256', $tmp);
+        if ($expectSha !== '' && !hash_equals(strtolower($expectSha), strtolower((string) $sha))) {
+            @unlink($tmp);
+            return false; // 校验失败 → 换源重试（CDN 缓存了旧内容时会这样）
+        }
+
+        return ['tmp' => $tmp, 'size' => $size, 'sha256' => $sha];
+    };
+
+    // 非 jsDelivr：无镜像概念
+    $isJsdelivr = (bool) preg_match('~^https?://(?:cdn|fastly|gcore|testingcf|testingrs)\.jsdelivr\.net/~i', $url);
+    if (!$isJsdelivr) {
+        $r = $once($url, $timeout);
+        return $r === false
+            ? ['ok' => false, 'error' => 'DOWNLOAD_FAILED']
+            : ['ok' => true] + $r;
+    }
+
+    $r = withMirrorFallback($url, $once, manifestMirrors(), $timeout);
+    if (!$r['ok']) {
+        return ['ok' => false, 'error' => 'DOWNLOAD_FAILED', 'tried' => $r['tried']];
+    }
+
+    return ['ok' => true, 'mirror' => $r['mirror'], 'tried' => $r['tried']] + $r['value'];
 }
 
 /** 备份单个已存在的文件 */
