@@ -1344,7 +1344,19 @@ JyDpobnlhbPplK7pl67popjvvJonCiAgICAgICAgICAuIGltcGxvZGUoJ++8mycsIGFycmF5X21h
 cChmbigkYykgPT4gJGNbJ25hbWUnXSAuICcgLSAnIC4gJGNbJ2RldGFpbCddLCAkY3JpdGljYWxG
 YWlsKSksCiAgICAnY2hlY2tzJyAgID0+ICRjaGVja3MsCl0sIEpTT05fVU5FU0NBUEVEX1VOSUNP
 REUgfCBKU09OX1BSRVRUWV9QUklOVCk7Cg==
-B64_HEALTH_PHP
+B64_HEALTH_PHP,
+'build-meta.json' => <<<'B64_BUILD_META_JSON'
+ewogICJhcHAiOiAibGFudGlhbi10dW5uZWwiLAogICJhcHBWZXJzaW9uIjogIjEuMC40IiwKICAi
+dmVyc2lvbiI6ICIxLjAuNCIsCiAgImJ1aWx0QXQiOiAiMjAyNi0wOS0yNlQwOToxNToyMFoiLAog
+ICJmaWxlQ291bnQiOiA5LAogICJ0b3RhbEJ5dGVzIjogMTc0NjE4OCwKICAiZmlsZXMiOiB7CiAg
+ICAiYXNzZXRzL2NvcmUtYXFCd004c1EuanMiOiA5NDc0MywKICAgICJhc3NldHMvaW5kZXgtWXVi
+b05XNGguanMiOiAxMzM5MSwKICAgICJhc3NldHMvbGlicy1CeU1yZHhSdi5qcyI6IDUwMDU1LAog
+ICAgImFzc2V0cy9zdHlsZS1EaThvSkpYaS5jc3MiOiA1MDMyOCwKICAgICJhc3NldHMvdWktRGNT
+VXVicmQuanMiOiAxNDA2MDEzLAogICAgImFzc2V0cy92aWV3cy1CcTQzekZQUC5qcyI6IDExNjIx
+NiwKICAgICJmYXZpY29uLnN2ZyI6IDk1MjIsCiAgICAiaWNvbnMuc3ZnIjogNTAzMSwKICAgICJp
+bmRleC5odG1sIjogODg5CiAgfSwKICAiYnVpbGRJZCI6ICI4OWE1MDJjZjFkNzkiLAogICJjaGFu
+bmVsIjogInN0YWJsZSIsCiAgInB1Ymxpc2hlZEF0IjogIjIwMjYtMDktMjZUMDk6MTU6MjBaIgp9
+B64_BUILD_META_JSON
 ];
 
 /* ---------- 备份目录准备（三级降级，保证一定备得下来） ---------- */
@@ -1379,17 +1391,22 @@ foreach ($FILES as $name => $b64) {
     }
     $abs = $ROOT . '/' . $name;
 
-    // 打上版本标记，便于肉眼确认文件已更新
-    $raw = str_replace(
-        '<?php',
-        "<?php\n/* [selfheal] 已由自助修复脚本覆盖于 " . date('Y-m-d H:i:s') . " */",
-        $raw
-    );
+    // 打上版本标记，便于肉眼确认文件已更新。
+    // 注意：只对 PHP 文件插注释，JSON 等非 PHP 文件保持原样（否则会破坏语法）。
+    if (substr(ltrim($raw), 0, 5) === '<?php') {
+        $raw = preg_replace(
+            '/^\s*<\?php/',
+            "<?php\n/* [selfheal] 已由自助修复脚本覆盖于 " . date('Y-m-d H:i:s') . " */",
+            $raw,
+            1
+        );
+    }
 
-    // 已处理过则跳过（幂等）
+    // 已处理过则跳过（幂等）—— 用内容哈希比对，对 JSON 等非 PHP 文件同样有效
+    $rawSha = hash('sha256', $raw);
     if (is_file($abs)) {
         $cur = (string) @file_get_contents($abs);
-        if (strpos($cur, '[selfheal]') !== false) {
+        if (hash('sha256', $cur) === $rawSha) {
             $report[] = ['file' => $name, 'status' => 'already_applied', 'size' => strlen($cur)];
             $same++;
             continue;
@@ -1535,7 +1552,7 @@ $allOk = ($failed === 0);
         if (!empty($r['hint'])) {
             $note = $r['hint'];
         } elseif ($s === 'already_applied') {
-            $note = '此前已修复，跳过（幂等）';
+            $note = '内容已一致，跳过（幂等）';
         } elseif (!empty($r['size'])) {
             $note = number_format($r['size']) . ' 字节';
         }
