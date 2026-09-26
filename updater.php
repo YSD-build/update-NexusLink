@@ -199,8 +199,59 @@ function isProtectedFile(string $rel): bool {
  *   }
  * }
  */
+/**
+ * 构造绕过 CDN 缓存的请求头。
+ *
+ * 【为什么需要】
+ * jsDelivr 对「分支名」形式的分支（@main）按文件缓存 12 小时，且是
+ * 逐个文件独立的。发布新版本后，可能出现 manifest.json 已回源、
+ * build-meta.json 还在旧缓存的情况 —— 清单说 1.1.0，本地读到 1.0.4，
+ * 于是一直判定「已是最新」，用户完全不知道该点哪里。
+ *
+ * 加上 no-cache 请求头，让各层缓存都回源拿最新。
+ * 对 tag（@v1.1.0）无害 —— tag 是永久缓存，回源结果也一样。
+ */
+function cacheBustHeaders(): array {
+    return [
+        'Cache-Control: no-cache, no-store, max-age=0',
+        'Pragma: no-cache',
+    ];
+}
+
+/**
+ * 给「分支名」形式的清单地址追加时间戳，强制拿到最新内容。
+ *
+ * 只处理分支，不处理 tag：
+ *   @main       → 追加 ?t=时间戳   （分支会变，必须绕缓存）
+ *   @v1.1.0     → 原样返回          （tag 内容永不变，绕了反而浪费回源）
+ *
+ * 判断依据：路径里的 @ 之后如果是 v+数字开头，视为版本 tag。
+ * 这样用户无论配 @main 还是 @v1.1.0，行为都正确，不需要改配置。
+ */
+function bustCdnCache(string $url): string {
+    $p = parse_url($url);
+    if ($p === false || empty($p['host']) || empty($p['path'])) {
+        return $url;
+    }
+    // 只看 URL 里是否出现 jsDelivr 风格的 @ref
+    if (!preg_match('~@([^/]+)/~', $p['path'], $m)) {
+        return $url; // 自建静态空间等，没有 @ref 概念
+    }
+    $ref = $m[1];
+    // v1 / v1.2 / v1.2.3 这类视为不可变 tag，不追加参数
+    if (preg_match('~^v?\d+(\.\d+)*$~', $ref)) {
+        return $url;
+    }
+    // 分支名（main / master / dev …）：追加时间戳
+    $sep = strpos($url, '?') === false ? '?' : '&';
+    return $url . $sep . 't=' . time();
+}
+
 function fetchManifest(string $url, int $timeout = 15): array {
-    $raw = false;
+    $url  = bustCdnCache($url);
+    $hdr  = cacheBustHeaders();
+    $raw  = false;
+
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -209,13 +260,14 @@ function fetchManifest(string $url, int $timeout = 15): array {
             CURLOPT_TIMEOUT        => $timeout,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
+            CURLOPT_HTTPHEADER     => $hdr,
         ]);
         $raw = curl_exec($ch);
         curl_close($ch);
     } else {
         $ctx = stream_context_create(['http' => [
             'timeout' => $timeout,
-            'header'  => "User-Agent: LantianUpdater/1.0\r\n",
+            'header'  => "User-Agent: LantianUpdater/1.0\r\n" . implode("\r\n", $hdr) . "\r\n",
         ]]);
         $raw = @file_get_contents($url, false, $ctx);
     }
@@ -249,6 +301,7 @@ function downloadFile(string $url, string $expectSha, int $expectSize = 0, int $
             CURLOPT_TIMEOUT        => $timeout,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
+            CURLOPT_HTTPHEADER     => cacheBustHeaders(),
         ]);
         $ok = curl_exec($ch);
         curl_close($ch);
@@ -322,9 +375,16 @@ function applyRemoteUpdate(array $manifest, string $manifestUrl, bool $dryRun = 
     }
 
     // baseUrl 用于拼接相对下载地址
+    //
+    // 【注意】这里必须用「未打时间戳」的原始地址派生 base。
+    // fetchManifest() 内部会调 bustCdnCache() 加 ?t=… 绕缓存，
+    // 若拿那个加工过的地址来派生，base 会变成
+    //   https://cdn.../lantian@main/?t=1234/     ← 时间戳夹在中间
+    // 拼出的文件地址全部 404。所以先剥掉查询串。
+    $cleanUrl = preg_replace('~\?.*$~', '', $manifestUrl);
     $base = (string) ($manifest['baseUrl'] ?? '');
     if ($base === '') {
-        $base = preg_replace('#/[^/]*$#', '/', $manifestUrl);
+        $base = preg_replace('#/[^/]*$#', '/', $cleanUrl);
     }
     if (substr($base, -1) !== '/') {
         $base .= '/';
@@ -362,6 +422,10 @@ function applyRemoteUpdate(array $manifest, string $manifestUrl, bool $dryRun = 
         $url = is_array($meta) && !empty($meta['url'])
             ? (string) $meta['url']
             : $base . $rel;
+        // 文件地址同样绕 CDN 缓存。分支形式（@main）下 jsDelivr 按文件独立
+        // 缓存 12 小时，只刷清单不刷文件，就会出现「清单说新版、文件还是旧的」
+        // —— 下载后 sha256 必然不符，更新在中途失败。
+        $url = bustCdnCache($url);
         $sha  = is_array($meta) ? (string) ($meta['sha256'] ?? '') : '';
         $size = is_array($meta) ? (int) ($meta['size'] ?? 0) : 0;
 
