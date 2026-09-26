@@ -347,6 +347,123 @@ function normalizeToBaseMirror(string $url): string {
  * @param int      $perTry   单次超时（秒）
  * @return array{ok:bool, value:mixed, mirror:string, error:string, tried:array}
  */
+/* ==================== 最新版本自动解析 ==================== */
+
+/**
+ * 从 jsDelivr 地址里解析出 GitHub owner/repo（仅 gh 类型）。
+ * 返回 ['YSD-build','update-NexusLink'] 或 null。
+ */
+function parseGhRepo(string $url): ?array {
+    if (!preg_match('~jsdelivr\.net/gh/([^/@]+)/([^/@]+)@~i', $url, $m)) {
+        return null;
+    }
+    return [$m[1], $m[2]];
+}
+
+/**
+ * 查 GitHub 的 tags 列表，用语义版本比较取最大值。
+ *
+ * 【为什么需要这个】
+ * jsDelivr 的 @latest 别名**不实时**。实测：v1.1.3 推上去后 2 分钟，
+ * 四个镜像的 @latest 全部仍返回 1.1.2，而 @v1.1.3（显式 tag）秒回源。
+ * 更糟的是 data.jsdelivr.com 的索引当时还停在 1.1.1。
+ *
+ * 所以「永久地址」如果写 @latest，发版后用户点检查更新会拿到旧版本，
+ * 且没有任何报错 —— 正是 1.1.1 修过的那类"看起来正常其实错了"的坑。
+ *
+ * 解法：**让引擎自己去 GitHub 问最新 tag**，再拼出显式 tag 的清单地址。
+ * GitHub tags API 是实时的（无需 token、不限速到不可用），实测推完即见。
+ *
+ * @return array{ok:bool, version:string, tag:string}
+ */
+function resolveLatestTag(string $manifestUrl): array {
+    $repo = parseGhRepo($manifestUrl);
+    if ($repo === null) {
+        return ['ok' => false, 'version' => '', 'tag' => ''];
+    }
+    [$owner, $name] = $repo;
+
+    $api = "https://api.github.com/repos/{$owner}/{$name}/tags?per_page=100";
+    $raw = false;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($api);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 6,
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT      => 'LantianUpdater/1.0',
+            CURLOPT_HTTPHEADER     => ['Accept: application/vnd.github+json'],
+        ]);
+        $raw = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(['http' => [
+            'timeout' => 10,
+            'header'  => "User-Agent: LantianUpdater/1.0\r\nAccept: application/vnd.github+json\r\n",
+        ]]);
+        $raw = @file_get_contents($api, false, $ctx);
+    }
+
+    if ($raw === false) {
+        return ['ok' => false, 'version' => '', 'tag' => ''];
+    }
+    $list = json_decode($raw, true);
+    if (!is_array($list) || !$list) {
+        return ['ok' => false, 'version' => '', 'tag' => ''];
+    }
+
+    // 只认 v?数字.数字 形式，按语义版本取最大（不能按字符串比：
+    // "1.1.9" > "1.1.10" 是错的）
+    $best = '';
+    $bestKey = [-1];
+    foreach ($list as $t) {
+        $tag = (string) ($t['name'] ?? '');
+        if (!preg_match('~^v?(\d+(?:\.\d+)*)$~', $tag, $m)) {
+            continue; // 跳过 1.0.0-test 之类的预发布
+        }
+        $key = array_map('intval', explode('.', $m[1]));
+        // 补零对齐后比较，保证 1.1 与 1.1.0 视为同级
+        while (count($key) < count($bestKey)) { $key[] = 0; }
+        $cmpLeft = $key;
+        $cmpRight = $bestKey;
+        while (count($cmpRight) < count($cmpLeft)) { $cmpRight[] = 0; }
+        if ($best === '' || $cmpLeft > $cmpRight) {
+            $best = $tag;
+            $bestKey = $key;
+        }
+    }
+
+    if ($best === '') {
+        return ['ok' => false, 'version' => '', 'tag' => ''];
+    }
+    return ['ok' => true, 'version' => ltrim($best, 'v'), 'tag' => $best];
+}
+
+/**
+ * 把一个「含可变引用（@latest / @main）」的清单地址，解析成具体的 tag 地址。
+ *
+ *   .../update-NexusLink@latest/manifest.json
+ *     → .../update-NexusLink@v1.1.3/manifest.json
+ *
+ * 已经是具体 tag 的地址原样返回（不做额外网络请求）。
+ */
+function pinManifestUrl(string $url): string {
+    if (preg_match('~jsdelivr\.net/gh/[^/@]+/[^/@]+@(v?\d+(?:\.\d+)*)/~i', $url)) {
+        return $url; // 已是显式版本，不用动
+    }
+    $r = resolveLatestTag($url);
+    if (!$r['ok']) {
+        return $url; // 解析失败就按原样试，让多源回退去处理
+    }
+    return preg_replace(
+        '~jsdelivr\.net/gh/([^/@]+/[^/@]+)@[^/]+/~i',
+        'jsdelivr.net/gh/$1@' . $r['tag'] . '/',
+        $url
+    );
+}
+
 function withMirrorFallback(string $url, callable $attempt, array $mirrors, int $perTry = 15): array {
     $base  = normalizeToBaseMirror($url);
     $tried = [];
@@ -369,6 +486,14 @@ function withMirrorFallback(string $url, callable $attempt, array $mirrors, int 
 
 function fetchManifest(string $url, int $timeout = 15): array {
     $hdr = cacheBustHeaders();
+
+    // 【先钉住版本】把 @latest / @main 这类可变引用解析成具体 tag。
+    // 原因见 pinManifestUrl() 的注释：jsDelivr 的 @latest 缓存滞后，
+    // 发版后可能几十分钟仍指向旧版本，而且不报错。
+    $pinned = pinManifestUrl($url);
+    if ($pinned !== $url) {
+        $url = $pinned;
+    }
 
     // 单次尝试：返回解码后的数组，失败返回 false
     $once = function (string $candidate, int $t) use ($hdr) {
@@ -414,7 +539,7 @@ function fetchManifest(string $url, int $timeout = 15): array {
         $j = $once($url, $timeout);
         return $j === false
             ? ['ok' => false, 'error' => 'MANIFEST_UNREACHABLE']
-            : ['ok' => true, 'manifest' => $j];
+            : ['ok' => true, 'manifest' => $j, 'url' => $url];
     }
 
     $r = withMirrorFallback($url, $once, $mirrors, $timeout);
@@ -426,6 +551,7 @@ function fetchManifest(string $url, int $timeout = 15): array {
         'ok'       => true,
         'manifest' => $r['value'],
         'mirror'   => $r['mirror'],   // 哪个源成功，前端可展示
+        'url'      => $url,           // 钉住版本后的地址，供拼下载路径
         'tried'    => $r['tried'],
     ];
 }

@@ -1867,7 +1867,11 @@ if ($resource === 'update') {
         if (!$r['ok']) {
             respond(['success' => false, 'error' => $r['error']], 502);
         }
-        $res = applyRemoteUpdate($r['manifest'], $url, (bool) ($b['dryRun'] ?? false));
+        // 用 fetchManifest 钉住版本后的地址拼下载路径。
+        // 配 @latest 时它已被解析成 @v<具体版本>，避免清单说新版、
+        // 文件却从滞后的别名路径下载。
+        $srcUrl = (string) ($r['url'] ?? $url);
+        $res = applyRemoteUpdate($r['manifest'], $srcUrl, (bool) ($b['dryRun'] ?? false));
         respond($res, $res['ok'] ? 200 : 500);
     }
 
