@@ -1,47 +1,15 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.1",
-  "publishedAt": "2026-09-26T13:54:46Z",
-  "notes": "修复 @main 分支缓存导致更新永远判定已是最新",
+  "version": "1.1.2",
+  "publishedAt": "2026-09-26T15:11:56Z",
+  "notes": "修复 IPv6 节点无法探测：按地址语义判断保留段、域名解析补查 AAAA、socket 地址补方括号",
   "baseUrl": "",
   "fileCount": 15,
-  "totalBytes": 1902044,
+  "totalBytes": 1908304,
   "files": {
-    "index.html": {
-      "sha256": "f5c72c8c4e917464e818534ebaf686d237d4c960eaedc8512ace5bdffa1972f9",
-      "size": 939
-    },
-    "build-meta.json": {
-      "sha256": "b556f77919b6df82df233c94181d0e35a76c9fbfd1bebeb5db27e08539f5e81f",
-      "size": 488
-    },
-    "favicon.svg": {
-      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
-      "size": 9522
-    },
-    "icons.svg": {
-      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
-      "size": 5031
-    },
-    "index.php": {
-      "sha256": "b364a68c3b274e60866373301fc525e6aabe73c49a4e5ea1365752937cc3967a",
-      "size": 4766
-    },
     "api.php": {
-      "sha256": "1cf380c781168055a07cf00499828976f99329ef179ce0d3e6ab570b005454d1",
-      "size": 74936
-    },
-    "db.php": {
-      "sha256": "19fb2d9df35a0e32cedc918c92d6af1fbb8845df0fcba1f2293095da60bba976",
-      "size": 12669
-    },
-    "updater.php": {
-      "sha256": "f06ba12633cd42c1d064e850c04237817c5cc1899e29882dc6efe7ccdaded682",
-      "size": 24312
-    },
-    "health.php": {
-      "sha256": "167f853670bcf79a6ef5813d4cc69699a5710a7b717e3389ae18b25f671ba26e",
-      "size": 11491
+      "sha256": "118c11bb1b3d86dc9909eb1d2797414796ddf2cca8c623721d0fcbd06aae4418",
+      "size": 81196
     },
     "assets/core-aqBwM8sQ.js": {
       "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
@@ -66,6 +34,38 @@
     "assets/views-vKhhZdxX.js": {
       "sha256": "ee5dbffe4f303625e8119ad212cd0a2847c4746427b27fcd29554b97005f85ce",
       "size": 135429
+    },
+    "build-meta.json": {
+      "sha256": "42d9176ed7abcdf4606af584b65c27e78bf65aae2f7c625995dd671af1710093",
+      "size": 488
+    },
+    "db.php": {
+      "sha256": "19fb2d9df35a0e32cedc918c92d6af1fbb8845df0fcba1f2293095da60bba976",
+      "size": 12669
+    },
+    "favicon.svg": {
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "size": 9522
+    },
+    "health.php": {
+      "sha256": "167f853670bcf79a6ef5813d4cc69699a5710a7b717e3389ae18b25f671ba26e",
+      "size": 11491
+    },
+    "icons.svg": {
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "size": 5031
+    },
+    "index.html": {
+      "sha256": "06336a02e9495bc9e71467717ed76f9dac910f20821e54fe1c3f5d18f738e66c",
+      "size": 939
+    },
+    "index.php": {
+      "sha256": "b364a68c3b274e60866373301fc525e6aabe73c49a4e5ea1365752937cc3967a",
+      "size": 4766
+    },
+    "updater.php": {
+      "sha256": "f06ba12633cd42c1d064e850c04237817c5cc1899e29882dc6efe7ccdaded682",
+      "size": 24312
     }
   }
 }

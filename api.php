@@ -307,7 +307,44 @@ function settingsGet(PDO $db, string $key, $default = null) {
 /* ==================== 节点主动探测（SSRF 防护） ==================== */
 
 /**
- * 判断一个 IPv4 地址是否属于「不允许被主动探测」的保留段。
+ * 通用 CIDR 匹配：判断二进制地址是否落在 [base, base+bits] 网段内。
+ *
+ * 【为什么不用 ip2long + 位移】
+ * 那套写法只适用于 IPv4（32 位）。IPv6 是 128 位，PHP 整数装不下，
+ * 必须走二进制字符串逐字节比较。这里统一用 inet_pton 拿到的原始字节，
+ * 一套逻辑同时覆盖 v4 和 v6，避免两套代码各自出错。
+ *
+ * 字节比较的关键：只比较「前 ceil(bits/8) 个字节」，其中最后一个字节
+ * 只取高位（bits % 8 位），其余位忽略。这样 /12 这种非整字节掩码也正确。
+ *
+ * @param string $bin  被测地址的二进制形式（inet_pton 结果，4 或 16 字节）
+ * @param string $net  网段基址的二进制形式（长度须与 $bin 一致）
+ * @param int    $bits 掩码位宽
+ */
+function cidrMatch(string $bin, string $net, int $bits): bool
+{
+    if (strlen($bin) !== strlen($net)) {
+        return false; // v4 和 v6 不互相匹配
+    }
+    $fullBytes = intdiv($bits, 8);   // 需要完整比较的字节数
+    $remBits   = $bits % 8;          // 余下的位
+
+    if ($fullBytes > 0 && substr($bin, 0, $fullBytes) !== substr($net, 0, $fullBytes)) {
+        return false;
+    }
+    if ($remBits > 0) {
+        $mask = 0xFF << (8 - $remBits) & 0xFF; // 高位掩码，如 remBits=4 -> 0xF0
+        $b = ord($bin[$fullBytes]) & $mask;
+        $n = ord($net[$fullBytes]) & $mask;
+        if ($b !== $n) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * 判断一个 IP 是否属于「不允许被主动探测」的保留段。IPv4 / IPv6 都支持。
  *
  * 【为什么要拦】
  * 探测接口是管理员点一下、服务器主动去连接任意 host:port 的功能。
@@ -315,7 +352,7 @@ function settingsGet(PDO $db, string $key, $default = null) {
  * 变成一个扫描内网的跳板：填写 127.0.0.1:6379 探 Redis、填 169.254.169.254
  * 读云厂商元数据服务拿临时凭据 —— 这是 SSRF 最经典的两种利用方式。
  *
- * 【拦哪些】
+ * 【IPv4 拦哪些】
  *   0.0.0.0/8        本网络
  *   10.0.0.0/8       私有
  *   100.64.0.0/10    运营商级 NAT（CGNAT）
@@ -328,43 +365,87 @@ function settingsGet(PDO $db, string $key, $default = null) {
  *   224.0.0.0/4      组播
  *   240.0.0.0/4      保留（含 255.255.255.255）
  *
+ * 【IPv6 拦哪些】—— 只拦「不可能用于公网节点」的段，
+ * 公网可路由的全球单播地址（2000::/3 内）一律放行。
+ *   ::1/128          回环
+ *   ::/128           未指定
+ *   ::ffff:0:0/96    IPv4 映射地址（必须拦！否则 127.0.0.1 会伪装成 ::ffff:127.0.0.1 绕过检查）
+ *   64:ff9b::/96     NAT64 转换前缀（同理，可映射到任意 v4 内网）
+ *   64:ff9b:1::/48   本地 NAT64
+ *   100::/64         丢弃前缀
+ *   2001:db8::/32    文档用（RFC3849）
+ *   2001::/23        IETF 协议保留（含 Teredo 2001::/32）
+ *   2002::/16        6to4（可内嵌任意 v4 地址）
+ *   fc00::/7         唯一本地地址（ULA，等价于 v4 私有段）
+ *   fe80::/10        链路本地
+ *   ff00::/8         组播
+ *
+ * 【曾经的 BUG，留档避免重犯】
+ * 旧实现是「IPv6 一律拒绝」，理由是「本项目节点全部是 IPv4」。
+ * 这个前提是错的 —— 实际部署中节点就是 IPv6（如 2404:8c80:85:8001::2f:7000
+ * 这类中国电信 IPv6 段），结果所有 v6 节点探测全部被拒，
+ * 报错「目标属于内网/保留地址段」，而管理员完全看不出是代码把 v6 一刀切了。
+ * 教训：安全策略必须基于「地址语义」判断，不能基于「我以为的部署现状」。
+ *
  * @return bool true = 是内网/保留地址，应当拒绝
  */
 function isBlockedProbeTarget(string $ip): bool
 {
-    // IPv6 一律拒绝：本项目节点全部是 IPv4，放行 v6 只会扩大攻击面
-    if (strpos($ip, ':') !== false) {
-        return true;
-    }
-    $n = ip2long($ip);
-    if ($n === false) {
+    $bin = @inet_pton($ip);
+    if ($bin === false) {
         return true; // 解析不了就不放行
     }
-    $n = sprintf('%u', $n); // 统一成无符号字符串比较，避免 32 位环境下溢出
 
-    $ranges = [
-        ['0.0.0.0',      8],
-        ['10.0.0.0',     8],
-        ['100.64.0.0',  10],
-        ['127.0.0.0',    8],
-        ['169.254.0.0', 16],
-        ['172.16.0.0',  12],
-        ['192.0.0.0',   24],
-        ['192.168.0.0', 16],
-        ['198.18.0.0',  15],
-        ['224.0.0.0',    4],
-        ['240.0.0.0',    4],
-    ];
-
-    foreach ($ranges as [$base, $bits]) {
-        $bn = sprintf('%u', ip2long($base));
-        $mask = $bits === 0 ? 0 : (~0 << (32 - $bits));
-        $mask = sprintf('%u', $mask & 0xFFFFFFFF);
-        if ((int) $n >> (32 - $bits) === (int) $bn >> (32 - $bits)) {
-            return true;
+    if (strlen($bin) === 4) {
+        // ---------- IPv4 ----------
+        $ranges = [
+            ['0.0.0.0',      8],
+            ['10.0.0.0',     8],
+            ['100.64.0.0',  10],
+            ['127.0.0.0',    8],
+            ['169.254.0.0', 16],
+            ['172.16.0.0',  12],
+            ['192.0.0.0',   24],
+            ['192.168.0.0', 16],
+            ['198.18.0.0',  15],
+            ['224.0.0.0',    4],
+            ['240.0.0.0',    4],
+        ];
+        foreach ($ranges as [$base, $bits]) {
+            $nb = @inet_pton($base);
+            if ($nb !== false && cidrMatch($bin, $nb, $bits)) {
+                return true;
+            }
         }
+        return false;
     }
-    return false;
+
+    if (strlen($bin) === 16) {
+        // ---------- IPv6 ----------
+        $ranges6 = [
+            ['::1',            128], // 回环
+            ['::',             128], // 未指定
+            ['::ffff:0:0',      96], // IPv4 映射（防 ::ffff:127.0.0.1 绕过）
+            ['64:ff9b::',       96], // NAT64
+            ['64:ff9b:1::',     48], // 本地 NAT64
+            ['100::',           64], // 丢弃前缀
+            ['2001:db8::',      32], // 文档用
+            ['2001::',          23], // IETF 协议保留（含 Teredo）
+            ['2002::',          16], // 6to4（内嵌 v4）
+            ['fc00::',           7], // ULA 唯一本地
+            ['fe80::',          10], // 链路本地
+            ['ff00::',           8], // 组播
+        ];
+        foreach ($ranges6 as [$base, $bits]) {
+            $nb = @inet_pton($base);
+            if ($nb !== false && cidrMatch($bin, $nb, $bits)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    return true; // 既不是 4 也不是 16 字节，异常
 }
 
 /**
@@ -375,11 +456,36 @@ function isBlockedProbeTarget(string $ip): bool
  * 把它 A 记录解析到 127.0.0.1，字面量检查就绕过去了。
  * 所以域名必须先解析，拿到真实 IP 再做保留段判断。
  *
+ * 【IPv6 支持】
+ * gethostbynamel() 只会返回 A 记录（IPv4），拿不到 AAAA。
+ * 所以必须并行查 AAAA，否则：
+ *   ① 纯 IPv6 节点域名永远报「域名无法解析」；
+ *   ② 更糟的是，只有 AAAA 记录的域名会误报解析失败，
+ *      而带 A 记录的域名又能正常探测 —— 行为不一致，很难排查。
+ * 这里用 dns_get_record 同时取 A 和 AAAA，任一成功即可用。
+ *
+ * 传入的 host 可能是：
+ *   - IPv4 字面量（1.2.3.4）
+ *   - IPv6 字面量（2404:8c80:85:8001::2f:7000，可能带方括号 [..]）
+ *   - 域名（node.example.com）
+ *
  * @return array{ok: bool, ip: string, reason: string}
  */
 function resolveProbeTarget(string $host): array
 {
     $host = trim($host);
+
+    // 允许写成 URL 形式或带方括号的 v6 字面量：剥掉 [] 和可能的 scheme/port
+    if (preg_match('~^[a-zA-Z][a-zA-Z0-9+.\-]*://~', $host)) {
+        $p = @parse_url($host);
+        if (is_array($p) && !empty($p['host'])) {
+            $host = $p['host'];
+        }
+    }
+    if (strlen($host) > 1 && $host[0] === '[' && substr($host, -1) === ']') {
+        $host = substr($host, 1, -1); // 去掉 v6 方括号
+    }
+
     if ($host === '') {
         return ['ok' => false, 'ip' => '', 'reason' => '节点地址为空'];
     }
@@ -401,15 +507,40 @@ function resolveProbeTarget(string $host): array
         return ['ok' => false, 'ip' => '', 'reason' => '节点地址格式不合法'];
     }
 
-    $ips = @gethostbynamel($host);
+    // 同时取 A（IPv4）与 AAAA（IPv6）。gethostbynamel 只有 A，不够用。
+    $ips = [];
+    $recs = @dns_get_record($host, DNS_A | DNS_AAAA);
+    if (is_array($recs)) {
+        foreach ($recs as $r) {
+            if (!empty($r['ip']))   { $ips[] = $r['ip']; }   // A 记录
+            if (!empty($r['ipv6'])) { $ips[] = $r['ipv6']; } // AAAA 记录
+        }
+    }
+    // dns_get_record 在部分环境（如缺 resolv.conf 权限）会失败，回退到 gethostbynamel
+    if (!$ips) {
+        $v4 = @gethostbynamel($host);
+        if (is_array($v4)) {
+            $ips = $v4;
+        }
+    }
+    $ips = array_values(array_unique($ips));
+
     if (!$ips) {
         return ['ok' => false, 'ip' => '', 'reason' => '域名无法解析'];
     }
+
     // 解析出多个地址时，只要有一个落在保留段就整体拒绝：
     // 否则 DNS 轮询会让探测结果忽好忽坏，也让绕过变得可能
     foreach ($ips as $ip) {
         if (isBlockedProbeTarget($ip)) {
             return ['ok' => false, 'ip' => $ip, 'reason' => '域名解析到内网/保留地址段，已拒绝探测'];
+        }
+    }
+
+    // 优先返回 IPv4（兼容性更好：很多节点只监听 v4），没有才用 v6
+    foreach ($ips as $ip) {
+        if (strpos($ip, ':') === false) {
+            return ['ok' => true, 'ip' => $ip, 'reason' => ''];
         }
     }
     return ['ok' => true, 'ip' => $ips[0], 'reason' => ''];
@@ -423,6 +554,13 @@ function resolveProbeTarget(string $host): array
  * curl 会发请求、等响应、跟重定向，既慢又会把节点上跑的非 HTTP 服务
  * （比如隧道端口）误判成失败。裸 TCP 握手才是「节点还活着吗」的正确问法。
  *
+ * 【IPv6 必须加方括号】
+ * PHP 的 socket 地址格式是 tcp://host:port，用冒号分隔 host 和 port。
+ * IPv6 地址本身含冒号，不加方括号会被解析成一堆多余的 host:port 片段，
+ * 报「Failed to parse address」之类的错误 —— 这是 IPv6 支持里最常踩的坑。
+ *   ✗ tcp://2404:8c80:85:8001::2f:7000:443
+ *   ✓ tcp://[2404:8c80:85:8001::2f:7000]:443
+ *
  * @return array{ok: bool, latencyMs: int, reason: string}
  */
 function probeTcp(string $ip, int $port, float $timeout = 2.0): array
@@ -431,8 +569,14 @@ function probeTcp(string $ip, int $port, float $timeout = 2.0): array
     $errno = 0;
     $errstr = '';
 
+    // IPv6 字面量加方括号（已经是 [..] 形式的不重复加）
+    $hostPart = $ip;
+    if (strpos($ip, ':') !== false && $ip[0] !== '[') {
+        $hostPart = '[' . $ip . ']';
+    }
+
     $fp = @stream_socket_client(
-        "tcp://{$ip}:{$port}",
+        "tcp://{$hostPart}:{$port}",
         $errno,
         $errstr,
         $timeout,
