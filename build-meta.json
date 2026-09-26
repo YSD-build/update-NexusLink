@@ -1,8 +1,8 @@
 {
   "app": "lantian-tunnel",
-  "appVersion": "1.0.3",
-  "version": "1.0.3",
-  "builtAt": "2026-09-26T09:06:24Z",
+  "appVersion": "1.0.4",
+  "version": "1.0.4",
+  "builtAt": "2026-09-26T09:15:20Z",
   "fileCount": 9,
   "totalBytes": 1746188,
   "files": {
@@ -17,5 +17,6 @@
     "index.html": 889
   },
   "buildId": "89a502cf1d79",
-  "channel": "stable"
+  "channel": "stable",
+  "publishedAt": "2026-09-26T09:15:20Z"
 }

@@ -1,10 +1,10 @@
 {
   "app": "lantian-tunnel",
-  "appVersion": "1.0.3",
-  "version": "1.0.3",
+  "appVersion": "1.0.4",
+  "version": "1.0.4",
   "channel": "stable",
-  "publishedAt": "2026-09-26T09:06:36Z",
-  "notes": "v1.0.3 修复：更新白名单遗漏 index.php/health.php、版本号读取错误、storage 目录自愈",
+  "publishedAt": "2026-09-26T09:15:20Z",
+  "notes": "v1.0.4 修复：更新白名单遗漏 index.php/health.php、storage 可写性误判、版本号读取错误",
   "baseUrl": "",
   "fileCount": 15,
   "totalBytes": 1818773,
@@ -69,5 +69,6 @@
       "sha256": "6ea98cc7f08eb10cf70e2cff7b87ac65a82ae313c2cf899f1cec0f69e84ab1e7",
       "size": 19201
     }
-  }
+  },
+  "builtAt": "2026-09-26T09:15:20Z"
 }
