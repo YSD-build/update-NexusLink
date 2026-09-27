@@ -165,11 +165,17 @@ final class UpdateController
         // 但纯不等判断有个洞：如果用户当前跑的比远端还新（例如开发机装了
         // 1.1.6 而正式清单还是 1.1.5-b2），界面会给出一个「更新」按钮，
         // 点下去等于降级 —— 这会覆盖掉更新的代码。
-        // 所以额外用 compareVersionKey 判一次方向：只有远端真正更新才 hasUpdate。
+        // 所以额外比一次方向：只有远端真正更新才 hasUpdate。
+        //
+        // 【必须写 self::，漏了会导致在线更新整个不可用】
+        // compareAppVersion 是本类的 private static 方法，不是全局函数。
+        // 之前这里裸写成 compareAppVersion(...)，PHP 会去全局作用域找同名函数，
+        // 找不到就抛 "Call to undefined function" → /update/check 直接 500，
+        // 前端表现是「检查更新失败」，用户以为网络问题，实际是代码里少了 self::。
         $hasUpdate = false;
         $direction = 'same';
         if ($remote !== '' && $remote !== $current) {
-            $cmp = compareAppVersion($remote, $current);
+            $cmp = self::compareAppVersion($remote, $current);
             $hasUpdate = $cmp > 0;
             $direction = $cmp > 0 ? 'upgrade' : ($cmp < 0 ? 'downgrade' : 'diff');
         }

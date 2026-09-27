@@ -1,11 +1,11 @@
 {
   "app": "lantian-tunnel",
   "version": "1.1.5-b2",
-  "publishedAt": "2026-09-27T06:25:01Z",
-  "notes": "b2：心跳时区修复 + 用户端/管理端/代理端分离 + 代理商管理页 + 深空玻璃统一",
+  "publishedAt": "2026-09-27T06:32:02Z",
+  "notes": "b2：心跳时区修复 + 用户端/管理端/代理端分离 + 代理商管理页 + 深空玻璃统一 + 修复在线更新 compareAppVersion 未加 self:: 导致 500",
   "baseUrl": "",
   "fileCount": 38,
-  "totalBytes": 2276089,
+  "totalBytes": 2276556,
   "files": {
     "api.php": {
       "sha256": "a6ac5639edead3edce80287fdfa6f2d06a75fcd784dbc4795793016ef61f25ab",
@@ -36,7 +36,7 @@
       "size": 170917
     },
     "build-meta.json": {
-      "sha256": "a9682d8d0e98abe8355f007705609a8e7f4a26e56ec91a42602032aae47fd15e",
+      "sha256": "8ae19c1efc083a5176239a0fffa33fceca45a10a78fb607d7c5c8ff2d1c0269c",
       "size": 492
     },
     "controllers/AgentController.php": {
@@ -88,8 +88,8 @@
       "size": 7345
     },
     "controllers/UpdateController.php": {
-      "sha256": "7a5b0f5d988bfae0190ba07e04dc999f1ea62839cf892e6648722d84eafdca05",
-      "size": 9891
+      "sha256": "f1ea81b1c1d4ec48b523858306109ad3ed81f3dd25729ae6be61f4cac5b525db",
+      "size": 10358
     },
     "controllers/UsersController.php": {
       "sha256": "928f795826894094ead24b6abb598099256f3f4df40d03dc51fcc9cc576dd704",
@@ -112,7 +112,7 @@
       "size": 5031
     },
     "index.html": {
-      "sha256": "e04797c3ec78ac247f74c29b59ad21b8eab442da8b0de2ec6353fd0227b7e888",
+      "sha256": "5d493325dadc8981bb26d392fe546a0747397ffb169e567c0900b6c8a9d41b3f",
       "size": 4223
     },
     "index.php": {
