@@ -20,14 +20,110 @@
  *   $segs[1] = resource  （clients / proxies / nodes / users / api-keys / downloads / settings / dashboard / auth）
  *   $segs[2] = id 或 子动作（login / stats / close / open）
  *   $segs[3] = 动作（traffic / status）
+ *
+ * ===========================================================================
+ * 【v1.1.5 架构变更说明 —— 请务必读完再改本文件】
+ *
+ * 本文件正在进行「单文件 → 模块化」的渐进式拆分。新的结构是：
+ *
+ *   lib/            基础设施（Bootstrap / Router / Auth / Req / Response / Helpers）
+ *   controllers/    按资源划分的业务逻辑
+ *   routes.php      全部路由定义（一眼看全系统接口）
+ *
+ * 迁移采用**双轨并存**策略，而不是一次性重写：
+ *
+ *   1. 新架构先加载，并在 Router 中注册全部路由
+ *   2. 请求到达时，若命中新路由 → 由控制器处理并 respond()（直接 exit）
+ *   3. 若未命中 → 继续执行本文件下方的**历史代码**（原 15 个 if 分支）
+ *
+ * 为什么这么设计（而不是直接删掉旧代码）：
+ *   · 历史代码里有一些行为细节（如 $segs[4] 的个别判断）没有文档，
+ *     一次性重写极易漏掉，而漏掉的后果是线上功能静默失效
+ *   · 双轨并存让「新路由出错」和「旧逻辑未迁移」互相隔离：
+ *     某个接口迁错了，把它在新路由表里摘掉即可立刻回退到旧实现
+ *   · 可以分批迁移 + 逐批回归，而不是赌一把大的
+ *
+ * 判断某接口是否已迁移：见 routes.php。未注册的路由会自动落到旧代码。
+ * ===========================================================================
  */
 
-require __DIR__ . '/db.php';
+// ---------------------------------------------------------------------------
+// 【新架构】引导 + 路由分发
+//
+// 这段必须放在最前面：新路由命中即 exit，不会再进入下方的历史代码。
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 【老版本自举 —— 必须放在所有 require 之前】
+//
+// 从 v1.1.4 升到 v1.1.5 时，执行更新的却是 v1.1.4 的 updater.php，
+// 而它的落盘白名单只认 assets/ 与根目录文件，会静默跳过 lib/ 与 controllers/。
+// 结果：api.php 更新成功，但它 require 的 lib/Bootstrap.php 根本不存在 → 整站 500。
+//
+// lib/Boot.php 负责检查并补齐这些缺失文件。它是单体文件、无外部依赖，
+// 因此即使 lib/ 目录整个不存在也能正常执行（这正是它存在的意义）。
+// 装好之后它会在 storage/state/boot.ok 打标记，后续请求只做一次 is_file()。
+// ---------------------------------------------------------------------------
+$__ltBootFile = __DIR__ . '/lib/Boot.php';
+if (is_file($__ltBootFile)) {
+    require_once $__ltBootFile;
+}
+
+require_once __DIR__ . '/lib/Bootstrap.php';
+
+// updater.php 提供 fetchManifest / applyRemoteUpdate 等更新引擎能力，
+// 由 UpdateController 使用。历史代码也在用，故两边都保证加载。
 require_once __DIR__ . '/updater.php';
+
+// ---------------------------------------------------------------------------
+// 【schema 自愈 —— 必须在路由分发之前】
+//
+// 这是 v1.1.5 心跳修复的关键一环，位置不能挪到下面历史代码里。
+//
+// 原因：新路由命中后会直接 respond() 并 exit，根本不会执行到下方第 139 行
+// 那句 ensureSchema($db)。如果自愈留在那里，走新路由的请求（包括
+// POST /v1/nodes/heartbeat）就永远不会触发补列 —— 心跳会重新坏掉，
+// 而且症状与修复前一模一样：恒返回 SCHEMA_NOT_READY。
+//
+// 放在这里，新旧两条路径都能覆盖。ensureSchema 内部有指纹快路径，
+// 正常情况下只是一次 SELECT，不会带来额外开销。
+// ---------------------------------------------------------------------------
+try {
+    ensureSchema(pdo());
+} catch (Throwable $e) {
+    // 自愈失败不阻断请求：让具体接口自己去报 SCHEMA_NOT_READY，
+    // 用户能看到明确的错误码，而不是一个没有上下文的 500。
+    if (function_exists('ltLog')) {
+        ltLog('schema', ['error' => $e->getMessage()]);
+    }
+}
+
+$__ltApiPath = Req::apiPath();
+
+if (Req::isValidV1()) {
+    ltLoadControllers();
+    require_once __DIR__ . '/routes.php';
+
+    // 交给路由表匹配。
+    //
+    // 【fallback 的妙用】Router::fallback 里不做 respond(404)，
+    // 而是把控制权交回本文件下方的历史代码 —— 这样未迁移的接口
+    // 依然由旧逻辑处理，行为完全不变。
+    Router::fallback(function (string $path) {
+        // 什么都不做：让 api.php 继续往下走历史代码
+    });
+
+    Router::dispatch(Req::method(), $__ltApiPath);
+    // 若走到这里说明 fallback 被调用（新路由未命中），继续执行历史代码。
+}
+
+// ---------------------------------------------------------------------------
+// 以下为历史代码（渐进迁移中，逐批搬到 controllers/）
+// ---------------------------------------------------------------------------
 
 $method = $_SERVER['REQUEST_METHOD'];
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri    = rtrim($uri, '/');
+
 
 /**
  * 从请求中剥离出 /v1/... 部分，兼容 PATH_INFO 与普通路径两种形式。
@@ -1366,6 +1462,25 @@ if ($resource === 'nodes') {
     if ($method === 'GET' && $id === null) {
         // 老库可能缺这些列（尚未迁移），按列存在性拼 SQL，避免整表查询 500
         $hasNew = hasColumn($db, 'nodes', 'protocols');
+
+        // 【v1.1.5】允许显式索取 nodeToken。
+        //
+        // 背景：node_token 只在「创建节点」那一次的响应里出现过，之后
+        // 列表接口永不回显（原注释：泄露即可用来冒充节点上报）。
+        // 这个默认策略是对的，但它有个致命副作用 —— 用户创建完节点后
+        // 去配置节点端心跳时，如果当时没把 token 抄下来，就再也拿不到，
+        // 表现就是「心跳怎么都调不通」，只能删了重建。这正是 v1.1.5
+        // 要修的「心跳无法使用」的第二个根因。
+        //
+        // 折中方案：默认仍然不回显；只有管理员**显式**带 withToken=1
+        // 时才返回。这样既保证了普通列表响应不泄露凭据，又给了运维
+        // 一条正规的取回途径（而不是逼用户去翻数据库）。
+        $wantToken = false;
+        if (isset($_GET['withToken']) && $_GET['withToken'] !== '0' && $_GET['withToken'] !== '') {
+            requireRole('admin');
+            $wantToken = true;
+        }
+
         $cols = 'id, name, host, port, status, clients, tunnels,
                  max_tunnels AS maxTunnels, region, version';
         $cols .= $hasNew
@@ -1373,7 +1488,16 @@ if ($resource === 'nodes') {
             : ", '[\"tcp\",\"udp\",\"http\",\"https\"]' AS protocols, NULL AS lastSeen,
                0 AS cpu, 0 AS mem, 0 AS connCount, 0 AS probeOk, NULL AS probeAt";
 
+        // node_token 列可能是后加的，单独按存在性拼接，避免老库 500
+        if ($wantToken) {
+            $cols .= hasColumn($db, 'nodes', 'node_token')
+                ? ', node_token AS nodeToken'
+                : ", '' AS nodeToken";
+        }
+
         $rows = $db->query("SELECT {$cols} FROM nodes ORDER BY id")->fetchAll();
+        $timeout = (int) settingsGet($db, 'nodeOfflineSeconds', 90);
+
         foreach ($rows as &$r) {
             $r['id'] = (string) $r['id'];
             foreach (['port', 'clients', 'tunnels', 'maxTunnels', 'connCount'] as $k) {
@@ -1383,11 +1507,102 @@ if ($resource === 'nodes') {
             $r['mem']      = (float) $r['mem'];
             $r['protocols'] = decodeProtocols($r['protocols'] ?? null);
             $r['probeOk']  = (bool) $r['probeOk'];
-            // node_token 永不回显：它是节点的长期凭据，泄露即可被用来冒充节点上报。
-            // 只在创建时一次性返回明文，之后无处可查（忘了就轮换）。
+
+            if ($wantToken) {
+                $r['nodeToken'] = (string) ($r['nodeToken'] ?? '');
+                // 明确告知这个 token 是否真的可用，前端据此显示警示
+                $r['tokenConfigured'] = $r['nodeToken'] !== '';
+            }
+
+            // 【v1.1.5 P3】心跳诊断字段
+            //
+            // 「心跳无法使用」过去极难排查：界面只显示在线/离线，
+            // 而用户根本不知道到底是「节点没发」「token 不对」还是
+            // 「发了但被判定超时」。这几个字段把判断依据直接摆出来。
+            $lastSeen = $r['lastSeen'] ?? null;
+            if ($lastSeen) {
+                $ago = time() - strtotime((string) $lastSeen);
+                $r['lastSeenAgo']   = $ago;
+                $r['heartbeatStale'] = $ago > $timeout;
+            } else {
+                $r['lastSeenAgo']   = null;   // 从未心跳过
+                $r['heartbeatStale'] = true;
+            }
+            $r['heartbeatTimeout'] = $timeout;
+
+            // node_token 永不在默认响应里出现（仅 withToken=1 时才有）
+            if (!$wantToken) {
+                unset($r['nodeToken']);
+            }
         }
         unset($r);
-        respond(['success' => true, 'nodes' => $rows]);
+
+        respond([
+            'success' => true,
+            'nodes'   => $rows,
+            // 顶层也带一份，方便前端显示「超过多久算离线」
+            'heartbeatTimeout' => $timeout,
+        ]);
+    }
+
+    // POST /nodes/{id}/token —— 查看或重新生成节点的 nodeToken（仅管理员）
+    //
+    // 【为什么单独开这个端点】
+    // 列表接口默认不返回 token，而「轮换」能力原先只挂在 PUT /nodes/{id}
+    // 的 rotateToken 参数里 —— 前端要轮换得先拼一个完整的 PUT 请求体，
+    // 很容易误改其它字段。独立端点语义清晰，也让「我要看当前 token」
+    // 和「我要换一个 token」变成两个明确动作。
+    if ($method === 'POST' && $id !== null && $id !== 'heartbeat' && $action === 'token') {
+        requireRole('admin');
+
+        if (!hasColumn($db, 'nodes', 'node_token')) {
+            respond([
+                'success' => false,
+                'error'   => 'SCHEMA_NOT_READY',
+                'message' => '数据库缺少 nodes.node_token 字段，请检查自动迁移',
+            ], 500);
+        }
+
+        $st = $db->prepare('SELECT id, name FROM nodes WHERE id = ?');
+        $st->execute([(int) $id]);
+        $node = $st->fetch();
+        if (!$node) {
+            respond(['success' => false, 'error' => 'NOT_FOUND'], 404);
+        }
+
+        $b  = body();
+        $do = $b['rotate'] ?? ($_GET['rotate'] ?? null);
+        $rotate = ($do === true || $do === '1' || $do === 1);
+
+        if ($rotate) {
+            $nt = newNodeToken();
+            $db->prepare('UPDATE nodes SET node_token = ? WHERE id = ?')
+               ->execute([$nt, (int) $node['id']]);
+            respond([
+                'success'   => true,
+                'node'      => $node['name'],
+                'nodeToken' => $nt,
+                'rotated'   => true,
+                'notice'    => '已生成新 token，旧凭据立即失效。请立刻更新节点端配置，'
+                             . '此后本 token 不会再在列表接口中出现。',
+            ]);
+        }
+
+        // 不轮换 → 查看当前 token
+        $q = $db->prepare('SELECT node_token FROM nodes WHERE id = ?');
+        $q->execute([(int) $node['id']]);
+        $cur = (string) $q->fetchColumn();
+
+        respond([
+            'success'   => true,
+            'node'      => $node['name'],
+            'nodeToken' => $cur,
+            'rotated'   => false,
+            'configured' => $cur !== '',
+            'notice'    => $cur === ''
+                ? '该节点尚未分配 token，请用 rotate=1 生成一个'
+                : '这是当前生效的 token。如怀疑泄露，请轮换。',
+        ]);
     }
 
     // POST /nodes/{id}/probe —— 主动探测节点连通性（仅管理员）

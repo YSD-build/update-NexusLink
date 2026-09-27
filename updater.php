@@ -181,7 +181,19 @@ function isProtectedFile(string $rel): bool {
     // 且必须由站长自行维护，任何更新源都不得触碰。
     // 其余核心文件（index.php / api.php / db.php / updater.php / health.php）
     // 均由 isAllowedRootFile() 白名单 + safeTargetPath() 路径校验共同管控。
-    return $rel === 'config.php';
+    if ($rel === 'config.php') {
+        return true;
+    }
+    // 【为什么 lib/Boot.php 也必须保护】
+    // 它是「老版本自举器」：负责在旧引擎漏装 lib/ controllers/ 之后把文件补齐。
+    // 一旦更新包（无论有意还是被劫持）把它删掉或改成空文件，
+    // 下一次从老版本升级就会回到「api.php 已更新、lib/ 全缺 → 整站 500」的死局，
+    // 而那时用户手上已经没有任何自动恢复手段了。
+    // 代价只是：自举器本身若要改，得由用户手工上传 —— 这个代价完全值得。
+    if ($rel === 'lib/Boot.php') {
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -238,8 +250,10 @@ function bustCdnCache(string $url): string {
         return $url; // 自建静态空间等，没有 @ref 概念
     }
     $ref = $m[1];
-    // v1 / v1.2 / v1.2.3 这类视为不可变 tag，不追加参数
-    if (preg_match('~^v?\d+(\.\d+)*$~', $ref)) {
+    // v1 / v1.2 / v1.2.3 / v1.1.5-b1 这类视为不可变 tag，不追加参数。
+    // 后缀（-b1 等）也要放行：分批发布的 tag 同样是不可变引用，
+    // 若当成分支名去追加 ?t=时间戳，会破坏 CDN 缓存命中、每次更新都回源。
+    if (preg_match('~^v?\d+(\.\d+)*(?:-[0-9A-Za-z.\-]+)?$~', $ref)) {
         return $url;
     }
     // 分支名（main / master / dev …）：追加时间戳
@@ -414,31 +428,106 @@ function resolveLatestTag(string $manifestUrl): array {
         return ['ok' => false, 'version' => '', 'tag' => ''];
     }
 
-    // 只认 v?数字.数字 形式，按语义版本取最大（不能按字符串比：
-    // "1.1.9" > "1.1.10" 是错的）
+    // 只认 v?数字.数字[.数字][-后缀] 形式，按语义版本取最大。
+    //
+    // 【为什么不能直接字符串比】"1.1.9" > "1.1.10" 是错的，必须拆成数字数组比。
+    //
+    // 【为什么现在要接受 -b1 / -beta 这类后缀】
+    // v1.1.5 起采用「分批发布」：同一版拆成 b1 / b2 两次推送。
+    // 旧的严格正则 ^v?(\d+(?:\.\d+)*)$ 会把 v1.1.5-b1 整体丢弃
+    // （注释原文写的是「跳过 1.0.0-test 之类的预发布」），
+    // 结果是 —— 用 @latest 永久地址的用户永远解析不到 b1/b2，更新功能静默失效。
+    // 分批发布是这个项目明确要走的路线，所以后缀必须被正常识别。
+    //
+    // 【排序规则】主版本号相同时，带后缀的排在无后缀之前
+    //   1.1.5-b1  <  1.1.5-b2  <  1.1.5
+    // 这样 b1 → b2 能正常升级（字符串不等即判有更新），
+    // 且将来出正式版 1.1.5 时，b2 用户也会被提示升级到正式版。
     $best = '';
-    $bestKey = [-1];
+    $bestKey = null;
     foreach ($list as $t) {
         $tag = (string) ($t['name'] ?? '');
-        if (!preg_match('~^v?(\d+(?:\.\d+)*)$~', $tag, $m)) {
-            continue; // 跳过 1.0.0-test 之类的预发布
+        // 捕获：1=主版本号串  2=后缀（可空）
+        if (!preg_match('~^v?(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.\-]+))?$~', $tag, $m)) {
+            continue; // 真正不认识的形态仍然跳过
+        }
+        // 【必须排除日期式 tag】2026-09-27 会被上面那条正则匹配成
+        // 「版本 2026 + 后缀 09-27」，结果是一个比任何真实版本都大的
+        // 幽灵版本 —— @latest 会永久指向它，更新功能彻底失效。
+        // 判据：主版本号只有一段且看起来像年份（>= 1900），
+        // 同时带后缀。真实版本 2026 不存在，而 v2026 这种单段大版本
+        // 在实践中也不会出现，所以这个判据不会误伤。
+        if (!str_contains($m[1], '.') && isset($m[2]) && (int) $m[1] >= 1900) {
+            continue;
         }
         $key = array_map('intval', explode('.', $m[1]));
-        // 补零对齐后比较，保证 1.1 与 1.1.0 视为同级
-        while (count($key) < count($bestKey)) { $key[] = 0; }
-        $cmpLeft = $key;
-        $cmpRight = $bestKey;
-        while (count($cmpRight) < count($cmpLeft)) { $cmpRight[] = 0; }
-        if ($best === '' || $cmpLeft > $cmpRight) {
+        $suffix = $m[2] ?? '';
+
+        if ($bestKey === null || compareVersionKey($key, $suffix, $bestKey) > 0) {
             $best = $tag;
-            $bestKey = $key;
+            $bestKey = ['nums' => $key, 'suffix' => $suffix];
         }
     }
 
-    if ($best === '') {
+    if ($best === '' || $bestKey === null) {
         return ['ok' => false, 'version' => '', 'tag' => ''];
     }
     return ['ok' => true, 'version' => ltrim($best, 'v'), 'tag' => $best];
+}
+
+/**
+ * 比较两个版本键，返回 -1 / 0 / 1。
+ *
+ * 版本键结构：['nums' => [1,1,5], 'suffix' => 'b1']
+ *
+ * 规则（对齐 semver 的直觉，但不引入完整 semver 依赖）：
+ *   ① 先比数字段，补零对齐（1.1 与 1.1.0 视为同级）
+ *   ② 数字相同时，无后缀 > 有后缀（1.1.5 正式版 > 1.1.5-b2）
+ *   ③ 都有后缀时按「字母段 + 数字段」分段比：
+ *      b2 < b10（数字段按数值比，不能按字符串 —— "b10" < "b2" 是错的）
+ *
+ * @param int[]  $aNums
+ * @param string $aSuf
+ * @param array{nums:int[],suffix:string} $b
+ */
+function compareVersionKey(array $aNums, string $aSuf, array $b): int {
+    $an = $aNums;
+    $bn = $b['nums'];
+    while (count($an) < count($bn)) { $an[] = 0; }
+    while (count($bn) < count($an)) { $bn[] = 0; }
+    for ($i = 0; $i < count($an); $i++) {
+        if ($an[$i] !== $bn[$i]) {
+            return $an[$i] <=> $bn[$i];
+        }
+    }
+
+    $bsuf = (string) ($b['suffix'] ?? '');
+    if ($aSuf === '' && $bsuf === '') { return 0; }
+    if ($aSuf === '') { return 1; }   // 无后缀更大：1.1.5 > 1.1.5-b2
+    if ($bsuf === '') { return -1; }
+
+    // 分段比较：把 'b12' 拆成 ['b', 12]，纯数字段按数值比
+    $seg = static function (string $s): array {
+        preg_match_all('~\d+|\D+~', $s, $mm);
+        return array_map(
+            static fn($x) => ctype_digit($x) ? (int) $x : $x,
+            $mm[0]
+        );
+    };
+    $as = $seg($aSuf);
+    $bs = $seg($bsuf);
+    for ($i = 0; $i < max(count($as), count($bs)); $i++) {
+        $x = $as[$i] ?? null;
+        $y = $bs[$i] ?? null;
+        if ($x === $y) { continue; }
+        if ($x === null) { return -1; }  // 前缀更短者更小：b1 < b1a
+        if ($y === null) { return 1; }
+        if (is_int($x) && is_int($y)) { return $x <=> $y; }
+        if (is_int($x)) { return -1; }   // 数字段 < 字母段
+        if (is_int($y)) { return 1; }
+        return strcmp((string) $x, (string) $y) <=> 0;
+    }
+    return 0;
 }
 
 /**
@@ -450,7 +539,8 @@ function resolveLatestTag(string $manifestUrl): array {
  * 已经是具体 tag 的地址原样返回（不做额外网络请求）。
  */
 function pinManifestUrl(string $url): string {
-    if (preg_match('~jsdelivr\.net/gh/[^/@]+/[^/@]+@(v?\d+(?:\.\d+)*)/~i', $url)) {
+    // 显式版本（含 -b1 这类后缀）直接返回，不做额外网络请求
+    if (preg_match('~jsdelivr\.net/gh/[^/@]+/[^/@]+@(v?\d+(?:\.\d+)*(?:-[0-9A-Za-z.\-]+)?)/~i', $url)) {
         return $url; // 已是显式版本，不用动
     }
     $r = resolveLatestTag($url);
@@ -833,9 +923,32 @@ function isAllowedRootFile(string $name): bool {
         'db.php',
         'updater.php',
         'health.php',       // 【修复】部署自检页
+        // v1.1.5：前后端分离后的路由表。
+        // 不放行它的话，控制器全装上了但路由不生效 —— 表现为
+        // 「更新成功、接口却还是旧的单文件行为」，极难排查。
+        'routes.php',
         // 发布清单本身（在线更新时用于比对，不落盘也无妨，但允许覆盖便于排查）
         'manifest.json',
     ], true);
+}
+
+/**
+ * 允许更新的子目录。
+ *
+ * 【为什么需要这一层】
+ * 原实现硬编码只认 assets/，而 v1.1.5 做了前后端分离，
+ * 后端拆成 lib/（基础设施）+ controllers/（业务），
+ * 如果白名单不跟着扩展，这些新目录下的文件会被 isAllowedPackageEntry()
+ * 静默跳过 —— 更新显示成功，实际后端一行没变。这类「成功但无效」
+ * 是最难排查的故障形态，宁可显式列出白名单。
+ *
+ * 仍然拒绝的：config.php（数据库口令）、storage/（运行时数据）、
+ * sql/（手工执行更安全）、tests/（不该上生产）。
+ *
+ * @return string[] 允许的顶层目录名（不含斜杠）
+ */
+function allowedPackageDirs(): array {
+    return ['assets', 'lib', 'controllers'];
 }
 
 /**
@@ -847,9 +960,11 @@ function isAllowedPackageEntry(string $rel): bool {
     if ($rel === '' || strpos($rel, '..') !== false) {
         return false;
     }
-    // assets/ 下的任意文件
-    if (strpos($rel, 'assets/') === 0 && strlen($rel) > 7) {
-        return true;
+    // 允许目录下的任意文件（assets/ 静态资源、lib/ 与 controllers/ 后端模块）
+    foreach (allowedPackageDirs() as $d) {
+        if (strpos($rel, $d . '/') === 0 && strlen($rel) > strlen($d) + 1) {
+            return true;
+        }
     }
     // 根目录白名单文件（不允许再带子路径）
     return isAllowedRootFile($rel);
@@ -896,9 +1011,17 @@ function applyLocalPackage(string $zipName, bool $dryRun = false): array {
         $rel = $entry;
 
         // 兼容带一层包装目录的 zip（如 lantian-1.0.3/assets/x.js）：
-        // 若路径首段既不是 assets 也不是白名单文件，则尝试剥掉一层
+        // 若路径首段既不是允许目录也不是白名单文件，则尝试剥掉一层。
+        //
+        // 【v1.1.5 修正】原来硬编码判断 `!== 'assets'`，新增 lib/ controllers/
+        // 之后必须改成查 allowedPackageDirs()，否则 lantian-1.1.5/lib/Router.php
+        // 这类「包名前缀 + 允许目录」的路径会被多剥一层，
+        // 变成 lib/Router.php → Router.php，而根目录没有白名单条目 → 整包被跳过。
         $firstSeg = explode('/', $rel)[0];
-        if ($firstSeg !== 'assets' && !isAllowedRootFile($firstSeg)) {
+        if ($firstSeg !== 'assets'
+            && !in_array($firstSeg, allowedPackageDirs(), true)
+            && !isAllowedRootFile($firstSeg)
+        ) {
             $slash = strpos($rel, '/');
             if ($slash !== false) {
                 $rel = substr($rel, $slash + 1);

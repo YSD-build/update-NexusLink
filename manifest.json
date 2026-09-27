@@ -1,71 +1,163 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.4",
-  "publishedAt": "2026-09-26T17:17:47Z",
-  "notes": "让 @latest 永久地址真正可用：自动查 GitHub tags 钉住具体版本，绕过 jsDelivr 滞后索引",
+  "version": "1.1.5-b1",
+  "publishedAt": "2026-09-26T20:03:11Z",
+  "notes": "1.1.5-b1：后端模块化拆分（lib/ + controllers/ + routes.php）、节点心跳修复、深空玻璃设计系统（12 视图 + 双主题）、升级自举器",
   "baseUrl": "",
-  "fileCount": 15,
-  "totalBytes": 1919799,
+  "fileCount": 38,
+  "totalBytes": 2214869,
   "files": {
     "api.php": {
-      "sha256": "69484bd87f5f959a37118518c89ef0c46b46941d2e53e8acd9b2b06346c55ad8",
-      "size": 81462
+      "sha256": "3938ea45d026ec0ad0d28cbca4719f4228e0220e2696b7f36e396c70edd774bc",
+      "size": 91513
     },
     "assets/core-aqBwM8sQ.js": {
       "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
       "size": 94743
     },
-    "assets/index-C3rPVxik.js": {
-      "sha256": "27893aeda7a64d6459256a55985a0d22a28cf3cf773ee7a8e0b75aab925c41e9",
-      "size": 12630
+    "assets/index-CGwLIJsc.js": {
+      "sha256": "ec1b7bc6e2017aafb21d63da753235ca376bbff569283245c4a530de7af6a610",
+      "size": 14401
     },
     "assets/libs-ByMrdxRv.js": {
       "sha256": "e04405fa596bce7860a5d657fbecbb19e55a91fd1e37d65ed9473bb27a140fc2",
       "size": 50055
     },
-    "assets/style-Dtr6blEK.css": {
-      "sha256": "43a4cb5d753f274e6bd7a29f34cdc4945f6d1b39fa73e50daa9b1623f42a5d23",
-      "size": 58884
+    "assets/style-C-whs5qt.css": {
+      "sha256": "4aaa260fa3438fd41f4e187da39ec78c5d544365ba50c9524b44b486393d28b8",
+      "size": 69735
     },
-    "assets/ui-DMWcgAQi.js": {
-      "sha256": "c2300c5bd895e7450f1cccc2620c0382e778b0b7f3c7de730f20e20ea884d53c",
-      "size": 1406149
+    "assets/ui-CE7qnSCl.js": {
+      "sha256": "a10d9ffdbca3bcfdc3f8ac8a133f07af22d8a7bc54d13664baebae1d22dbee73",
+      "size": 1407313
     },
-    "assets/views-vKhhZdxX.js": {
-      "sha256": "ee5dbffe4f303625e8119ad212cd0a2847c4746427b27fcd29554b97005f85ce",
-      "size": 135429
+    "assets/views-Dq1sE61E.js": {
+      "sha256": "b351ce03b5d3395bac8511038b78bc606e556ac733df643ffe7eb90eda9ab2b7",
+      "size": 135807
     },
     "build-meta.json": {
-      "sha256": "7eafc0cb1f0447502d75813549733632cb92b155f03957f8870bac97d3847ea0",
-      "size": 488
+      "sha256": "97f761ad37cb5af2bf1308acd9101f2c539013559e98b068bae586f5dd6d3b13",
+      "size": 492
+    },
+    "controllers/AgentController.php": {
+      "sha256": "e97ba2e1d1c61d23a2f320b8b4abf04524991f123687bc6b6f3ae4b20eb64cfe",
+      "size": 26885
+    },
+    "controllers/ApiKeysController.php": {
+      "sha256": "7809e27846c7f3ac36edd75a17b44013efc75f4ba377180e40e0f384ab8fe2d9",
+      "size": 2113
+    },
+    "controllers/AuthController.php": {
+      "sha256": "e397fa166dbdf76389e4e8b840b5b4edd60f5ce8cc86ef38893c7f5e652df188",
+      "size": 24881
+    },
+    "controllers/ClientsController.php": {
+      "sha256": "e67f51b87647b00b28deaa3808f8c15a9d73971d8f12e1afcf9e4e37178fa5c6",
+      "size": 9639
+    },
+    "controllers/DashboardController.php": {
+      "sha256": "dddfd3893fdd80b6aa71428459e5c705364b2089cf8c73313bdc2be58f9c4de6",
+      "size": 2152
+    },
+    "controllers/DocsController.php": {
+      "sha256": "2416ec6d2c592f4d8eb08b9471a12b7a764700722431b40e8cf635cbf4096297",
+      "size": 18241
+    },
+    "controllers/DownloadsController.php": {
+      "sha256": "9d3fe186c6962fbb00750310062d59f61dbeb120e52510cb28accea1f8db0dcf",
+      "size": 691
+    },
+    "controllers/NodesController.php": {
+      "sha256": "aedaa35b9974541c013d4fd535bae91a896528b7e946fdbd8ccf4f773e3067dd",
+      "size": 24363
+    },
+    "controllers/ProxiesController.php": {
+      "sha256": "f1465813bb0671b01db6ace9eb78acbe048b079f54e6a6a64ad994fe3a23affd",
+      "size": 10606
+    },
+    "controllers/SessionsController.php": {
+      "sha256": "6fc6bab6e51fd6b5c10e7ff3bc2ad8170f38e92907f172aed240bf0c9fc3159c",
+      "size": 2415
+    },
+    "controllers/SettingsController.php": {
+      "sha256": "4ac53520df97b0677afa6b410830c24c6fc6b520d02019812d45fcc2064fe904",
+      "size": 5431
+    },
+    "controllers/SetupController.php": {
+      "sha256": "458e1481a276bb3d8d62bf2870534a935fe178d72497803ed149740a35e86b0c",
+      "size": 7038
+    },
+    "controllers/UpdateController.php": {
+      "sha256": "7a5b0f5d988bfae0190ba07e04dc999f1ea62839cf892e6648722d84eafdca05",
+      "size": 9891
+    },
+    "controllers/UsersController.php": {
+      "sha256": "928f795826894094ead24b6abb598099256f3f4df40d03dc51fcc9cc576dd704",
+      "size": 5504
     },
     "db.php": {
-      "sha256": "19fb2d9df35a0e32cedc918c92d6af1fbb8845df0fcba1f2293095da60bba976",
-      "size": 12669
+      "sha256": "53a1290f15d790e12fc41dde5bb1cd01ad172a9bd3532f1290095b2b62481676",
+      "size": 30688
     },
     "favicon.svg": {
       "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
       "size": 9522
     },
     "health.php": {
-      "sha256": "167f853670bcf79a6ef5813d4cc69699a5710a7b717e3389ae18b25f671ba26e",
-      "size": 11491
+      "sha256": "ed799789bb7c48671ea6b6e4f87eb61d17366416e7cb56818ac96ee3939f797f",
+      "size": 15000
     },
     "icons.svg": {
       "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
       "size": 5031
     },
     "index.html": {
-      "sha256": "0e5ee553a9015ae0a9648cd334474bb62231608c4884a5804249a2dfb5bfcd36",
-      "size": 939
+      "sha256": "89bd2408bb5257cf794cc193c1b97815986e7b9b1fae3266d83df3664528e2b2",
+      "size": 4223
     },
     "index.php": {
-      "sha256": "b364a68c3b274e60866373301fc525e6aabe73c49a4e5ea1365752937cc3967a",
-      "size": 4766
+      "sha256": "499eb5d9e4a7234fc542e81dbbdc516b2edd6530f12c38e2423284637c9530ac",
+      "size": 5412
+    },
+    "lib/Auth.php": {
+      "sha256": "97e68f98e6718f3a242d6073b178f73d727bb729132ab6e95752d19417d40c8e",
+      "size": 12213
+    },
+    "lib/Boot.php": {
+      "sha256": "ae01f856ce6ac8ca9d81b91aabd848f23dddd2f10299016c33b209a5d7011e70",
+      "size": 31944
+    },
+    "lib/Bootstrap.php": {
+      "sha256": "ea806ba1d494f85475bddf52a332f45cd03b5f1303fa74a901e118322fa50a31",
+      "size": 5305
+    },
+    "lib/Helpers.php": {
+      "sha256": "26b8785294ce20452919b0b3cf8119cfff5c4d84cd9ebdb4e52ccd5e030860af",
+      "size": 8110
+    },
+    "lib/Request.php": {
+      "sha256": "17e8a539060f810d64d73606b5aac23e564e6878507e0d7e46783f420138488e",
+      "size": 5438
+    },
+    "lib/Response.php": {
+      "sha256": "7ff0ef64e7a84575bcfa74ed0756a56a63625052ecb38d91a4d8f7f0590b60ba",
+      "size": 3965
+    },
+    "lib/Router.php": {
+      "sha256": "4dec23812565225679a8b747c8c56ef2ba0698e1eab2c98c6d8bad538092db26",
+      "size": 8681
+    },
+    "router.php": {
+      "sha256": "98777f1cc103848859688fa1282e2c6398cf33400054cf01aa42d3a969c1354d",
+      "size": 2686
+    },
+    "routes.php": {
+      "sha256": "5a6395208e0259aa5170f198b75256e010de95d00aff6edf83332aad4315f6a6",
+      "size": 11088
     },
     "updater.php": {
-      "sha256": "6d14ad64ef33f06b341daf4d5f517722a4aad7a3e534a7bf0cac35dc14033ba4",
-      "size": 35541
+      "sha256": "8fe561092d3c2c6da41e8fd03143865adab9e728eff8b083c211bba8e76cee39",
+      "size": 41654
     }
   }
 }

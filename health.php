@@ -108,14 +108,85 @@ foreach ([
         $exists ? "路径 = {$root}/{$f}" : '');
 }
 
+// ---------------- 2.5 模块化目录（v1.1.5 前后端分离） ----------------
+/*
+ * 【为什么要单列这几项检查】
+ * v1.1.4 → v1.1.5 升级时，旧引擎不会落盘 lib/ controllers/ routes.php，
+ * 站点会变成「新版 api.php + 空 lib/」→ 整站 500 白屏。
+ * 自举器（lib/Boot.php）能自动补，但它自己需要手工上传一次。
+ * 如果用户忘了传，或者上传到了错误的位置，症状就是一个没有任何线索的 500。
+ *
+ * 把这几项放进自检页，用户打开 health.php 就能立刻看出是不是这个问题 ——
+ * 而不是看到白屏不知道从哪查起。
+ */
+$bootFile = $root . '/lib/Boot.php';
+$add('自举器 lib/Boot.php', is_file($bootFile),
+    is_file($bootFile)
+        ? '存在'
+        : '缺失 → 若从 1.1.4 升级请先手工上传此文件（见升级说明第二节）',
+    false,
+    is_file($bootFile) ? "路径 = {$bootFile}" : '');
+
+$libFiles = ['Bootstrap.php', 'Router.php', 'Request.php', 'Response.php', 'Auth.php', 'Helpers.php'];
+$libMissing = [];
+foreach ($libFiles as $lf) {
+    if (!is_file($root . '/lib/' . $lf)) {
+        $libMissing[] = $lf;
+    }
+}
+$add('基础设施 lib/', !$libMissing,
+    $libMissing
+        ? '缺失 ' . count($libMissing) . ' 个：' . implode(', ', $libMissing) . ' → 升级未完成或自举未触发'
+        : count($libFiles) . ' 个文件齐备',
+    true);   // 【关键项】lib/ 不全 = 整站 500，必须报警
+
+$ctrlDir = $root . '/controllers';
+$ctrlCount = is_dir($ctrlDir) ? count(glob($ctrlDir . '/*.php')) : 0;
+$add('控制器 controllers/', $ctrlCount >= 14,
+    $ctrlCount > 0 ? "{$ctrlCount} 个控制器" : '缺失 → 业务接口会全部回落到 api.php 里的历史代码',
+    true);
+
+$add('路由表 routes.php', is_file($root . '/routes.php'),
+    is_file($root . '/routes.php') ? '存在' : '缺失 → api.php 引导时 require 会失败（整站 500）',
+    true);
+
+// 自举状态标记：有它说明自举成功跑过至少一次
+$bootOk = $root . '/storage/state/boot.ok';
+$bootOkExists = is_file($bootOk);
+$add('自举状态标记', $bootOkExists || !$libMissing,
+    $bootOkExists
+        ? '自举已完成'
+        : ($libMissing ? '未自举且文件不全 → 请检查 storage/packages/ 是否有升级包' : '目录完整，无需自举'),
+    false,
+    $bootOkExists ? "标记文件 = {$bootOk}" : '');
+
+// 自举日志：出错时最有用的线索
+$bootLogs = is_dir($root . '/storage/logs') ? glob($root . '/storage/logs/bootstrap-*.log') : [];
+if ($bootLogs) {
+    $lastLog = end($bootLogs);
+    $logTail = trim((string) @file_get_contents($lastLog));
+    $lastLine = $logTail === '' ? '' : trim((string) substr(strrchr("\n" . $logTail, "\n"), 1));
+    $failed = stripos($lastLine, 'failed') !== false;
+    $add('自举日志', !$failed,
+        $failed ? '最近一次自举失败 → 详见 storage/logs/' . basename($lastLog) : '无异常',
+        false,
+        $isAdmin ? '最近一条 = ' . mb_substr($lastLine, 0, 200) : '');
+}
+
 // ---------------- 3. PHP 扩展 ----------------
 foreach (['pdo_mysql', 'mbstring', 'json', 'zlib', 'zip'] as $ext) {
     $on = extension_loaded($ext);
     $hint = '';
     if (!$on) {
-        $hint = $ext === 'zip'
-            ? '未启用 → 本地包更新不可用（远程更新不受影响）'
-            : '未启用 → 系统无法正常运行，请在 PHP 设置中安装';
+        if ($ext === 'zip') {
+            // 【提示要跟着实现改】v1.1.5 之后自举器与更新引擎都能在无 zip 扩展时工作：
+            // 更新引擎仍依赖 ZipArchive，但自举器内置了纯 PHP 的 zip 读取（只依赖 zlib）。
+            // 所以这里的措辞不能再说「本地包更新不可用」，那已经不准了。
+            $hint = '未启用 → 更新引擎的本地包解压不可用；'
+                  . '自举器会自动改用内置的纯 PHP 解压（依赖 zlib），仍可自救';
+        } else {
+            $hint = '未启用 → 系统无法正常运行，请在 PHP 设置中安装';
+        }
     }
     $add("PHP 扩展 {$ext}", $on, $on ? '已启用' : $hint, $ext !== 'zip');
 }
