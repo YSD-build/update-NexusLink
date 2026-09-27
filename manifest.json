@@ -1,11 +1,11 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.5-b3",
-  "publishedAt": "2026-09-27T06:50:57Z",
-  "notes": "用户端/管理端/代理端按角色分离 + 代理商管理页与控制台 + 心跳时区错位修复（绝对时间戳）+ 全局深空玻璃统一 + 修复在线更新 compareAppVersion 未加 self:: 导致 500 + 打包清单与实际白名单对齐",
+  "version": "1.1.5-b4",
+  "publishedAt": "2026-09-27T15:16:28Z",
+  "notes": "新增应急救援控制台 rescue.php（所有接口 UNAUTHORIZED / 整站 500 时的兜底入口：清空会话 / 解锁账号 / 重置密码 / 重建管理员）+ 随包下发",
   "baseUrl": "",
-  "fileCount": 38,
-  "totalBytes": 2281529,
+  "fileCount": 39,
+  "totalBytes": 2313845,
   "files": {
     "api.php": {
       "sha256": "a6ac5639edead3edce80287fdfa6f2d06a75fcd784dbc4795793016ef61f25ab",
@@ -36,7 +36,7 @@
       "size": 170917
     },
     "build-meta.json": {
-      "sha256": "4017f96d5d7adda61a741b5130865643877d644c4a5fe1e785a07c974f751e04",
+      "sha256": "4cd773830e3f54213cca560fc2c9a517718bbae61636223c1697852c9f33f92e",
       "size": 492
     },
     "controllers/AgentController.php": {
@@ -116,7 +116,7 @@
       "size": 5031
     },
     "index.html": {
-      "sha256": "ffcae1ec1fc88c95eadbf44fa6acf923af60954f01d209f0b9e04e7862718b4b",
+      "sha256": "7195331fe8bc55f20d9ea16e742290d10493c89b278c4935cb5ef91e258216dc",
       "size": 4223
     },
     "index.php": {
@@ -151,13 +151,17 @@
       "sha256": "4dec23812565225679a8b747c8c56ef2ba0698e1eab2c98c6d8bad538092db26",
       "size": 8681
     },
+    "rescue.php": {
+      "sha256": "dd84bb675cf433c637c60beadbbb479cb8fb48f0a66b9320c5b107e8e779b680",
+      "size": 31612
+    },
     "routes.php": {
       "sha256": "5a6395208e0259aa5170f198b75256e010de95d00aff6edf83332aad4315f6a6",
       "size": 11088
     },
     "updater.php": {
-      "sha256": "e1bcf53afb62fe37b2751e2c30dd83cbbe4e392cc10efdf3f3fee3c9e78d1eb4",
-      "size": 42096
+      "sha256": "3cc34252d174c6c901a9ddc3e38d1fb8378954152d9f0ce3faff0afe723affcc",
+      "size": 42800
     }
   }
 }
