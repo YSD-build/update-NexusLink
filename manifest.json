@@ -1,11 +1,11 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.5-b5",
-  "publishedAt": "2026-09-27T15:33:56Z",
-  "notes": "修复「所有接口 UNAUTHORIZED」：bearerToken() 穷尽六个取值位置（含 REDIRECT_ 前缀与 getallheaders 回捞），前端去掉会被 nginx 丢弃的下划线头 X-API-Key 改用 X-Api-Key；救援接口改为本机访问自动生成令牌",
+  "version": "1.1.5-b6",
+  "publishedAt": "2026-09-27T15:42:43Z",
+  "notes": "补上不依赖 Web 服务器的命令行自救通道 emergency-fix.sh（含请求头透传自检，定位 UNAUTHORIZED 真凶）；修复应急脚本数据库连接方式写死 TCP 导致的误报「连不上」",
   "baseUrl": "",
-  "fileCount": 39,
-  "totalBytes": 2324088,
+  "fileCount": 40,
+  "totalBytes": 2339422,
   "files": {
     "api.php": {
       "sha256": "a6ac5639edead3edce80287fdfa6f2d06a75fcd784dbc4795793016ef61f25ab",
@@ -36,7 +36,7 @@
       "size": 170917
     },
     "build-meta.json": {
-      "sha256": "9fe8ee7951168e6a372dcddc2ab14d46d41d1d424004ad5cb9eea550aa61cacb",
+      "sha256": "a578159a78ea8a9c2230e9700f8d4a3dc4f3d931b780be6f789de277c7f1b3c1",
       "size": 492
     },
     "controllers/AgentController.php": {
@@ -103,6 +103,10 @@
       "sha256": "990c54f0bbe76263ed5bca69d631b3627406309ddef87e2a1d49bc19d114896a",
       "size": 7217
     },
+    "emergency-fix.sh": {
+      "sha256": "3e37a8f78cf971d2f4c49baada4adff286ced6ac01533144b2a1739d1e4a4f2f",
+      "size": 14394
+    },
     "favicon.svg": {
       "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
       "size": 9522
@@ -116,7 +120,7 @@
       "size": 5031
     },
     "index.html": {
-      "sha256": "bd043db745e58b8ee45afd21a6d52fcba945bfbabf7b9bab2887edb09f4966ee",
+      "sha256": "c67db34571aabc4e50198d0f84dd863ad245f681447cfde26865bed93a3a5513",
       "size": 4223
     },
     "index.php": {
@@ -160,8 +164,8 @@
       "size": 11088
     },
     "updater.php": {
-      "sha256": "3cc34252d174c6c901a9ddc3e38d1fb8378954152d9f0ce3faff0afe723affcc",
-      "size": 42800
+      "sha256": "0f086953124aee4512bf4b08b60833e1863cc738377b29de017295de9c8b9018",
+      "size": 43740
     }
   }
 }
