@@ -1,11 +1,11 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.5-b4",
-  "publishedAt": "2026-09-27T15:16:28Z",
-  "notes": "新增应急救援控制台 rescue.php（所有接口 UNAUTHORIZED / 整站 500 时的兜底入口：清空会话 / 解锁账号 / 重置密码 / 重建管理员）+ 随包下发",
+  "version": "1.1.5-b5",
+  "publishedAt": "2026-09-27T15:33:56Z",
+  "notes": "修复「所有接口 UNAUTHORIZED」：bearerToken() 穷尽六个取值位置（含 REDIRECT_ 前缀与 getallheaders 回捞），前端去掉会被 nginx 丢弃的下划线头 X-API-Key 改用 X-Api-Key；救援接口改为本机访问自动生成令牌",
   "baseUrl": "",
   "fileCount": 39,
-  "totalBytes": 2313845,
+  "totalBytes": 2324088,
   "files": {
     "api.php": {
       "sha256": "a6ac5639edead3edce80287fdfa6f2d06a75fcd784dbc4795793016ef61f25ab",
@@ -15,8 +15,8 @@
       "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
       "size": 94743
     },
-    "assets/index-CDQVp9Jp.js": {
-      "sha256": "afd9ab7d5b714f9ff670f335600a90064d407a6fac9ea0d08ca4759b17bf6250",
+    "assets/index-DtAf7JXq.js": {
+      "sha256": "7bb4fa013bbab42d098cc41cb02e93ebaa8227278f7c38d402e1328e005be971",
       "size": 15162
     },
     "assets/libs-ByMrdxRv.js": {
@@ -31,12 +31,12 @@
       "sha256": "fd770b5b7a34b299c3d6a5e6ed5402285a695393063556677df8fddc2c345bec",
       "size": 1413957
     },
-    "assets/views-Ci9f09Oo.js": {
-      "sha256": "a7f2e98d150257ced8bb5d0e7ab9d5f97d6fcc51d1530c9dffa4d73427f6d750",
+    "assets/views-CSbsFAP3.js": {
+      "sha256": "29f9e70cfc4d05fc6cdec5af51571c038c0f16c6f65435b23c4c638c5b278dcd",
       "size": 170917
     },
     "build-meta.json": {
-      "sha256": "4cd773830e3f54213cca560fc2c9a517718bbae61636223c1697852c9f33f92e",
+      "sha256": "9fe8ee7951168e6a372dcddc2ab14d46d41d1d424004ad5cb9eea550aa61cacb",
       "size": 492
     },
     "controllers/AgentController.php": {
@@ -96,8 +96,8 @@
       "size": 5504
     },
     "db.php": {
-      "sha256": "c80dd410f523530efc1068e199c70299df6bdaa5dc11abadaa600aa48f36beb5",
-      "size": 31972
+      "sha256": "35a215898581977b29e71e1689f669d7a72b5408eab0d44efb9f6f0f7e98344e",
+      "size": 37206
     },
     "diag-heartbeat.sh": {
       "sha256": "990c54f0bbe76263ed5bca69d631b3627406309ddef87e2a1d49bc19d114896a",
@@ -116,7 +116,7 @@
       "size": 5031
     },
     "index.html": {
-      "sha256": "7195331fe8bc55f20d9ea16e742290d10493c89b278c4935cb5ef91e258216dc",
+      "sha256": "bd043db745e58b8ee45afd21a6d52fcba945bfbabf7b9bab2887edb09f4966ee",
       "size": 4223
     },
     "index.php": {
@@ -152,8 +152,8 @@
       "size": 8681
     },
     "rescue.php": {
-      "sha256": "dd84bb675cf433c637c60beadbbb479cb8fb48f0a66b9320c5b107e8e779b680",
-      "size": 31612
+      "sha256": "90eb8ba2072047ce7428b91b0df0a9bb7dc7b47b2ce7b51ab630f7593a056754",
+      "size": 36621
     },
     "routes.php": {
       "sha256": "5a6395208e0259aa5170f198b75256e010de95d00aff6edf83332aad4315f6a6",

@@ -74,19 +74,90 @@ $FAIL_FILE = $STATE_DIR . '/rescue.fail';
 $LOG_FILE  = $LOG_DIR   . '/rescue.log';
 
 /* ===========================================================================
- * 0. 总闸：没有令牌文件 = 本页不存在
+ * 0. 首次启用：自动生成令牌（不再要求用户手工建文件）
  * ---------------------------------------------------------------------------
- * 注意这里返回 404 而不是 403。403 等于告诉扫描器「这里有个受保护的东西」，
- * 404 才是「这里什么都没有」。安全页面应当学会伪装成不存在。
+ * 【为什么改掉「必须手工建 rescue.key」的设计】
+ *
+ * 原设计让用户自己 ssh 进去建文件。听起来更安全，实际是个坏取舍：
+ *   · 出故障时人本来就急，再要求他敲 5 条命令，等于把救援工具锁在门外
+ *   · 这个文件的存在本身就是「救援已启用」的信号，而大多数人根本不知道
+ *     要去建它 —— 结果是「上传了 rescue.php 却什么都点不动」
+ *
+ * 现在改成：首次访问时若没有令牌文件，且满足下面的放行条件，
+ * 就自动生成一个随机令牌并**显示在页面上**，让用户立刻能用。
+ *
+ * 【自动放行条件（必须同时满足）】
+ *   ① 请求来自本机回环地址（127.0.0.1 / ::1）—— 说明是 SSH 隧道或
+ *      服务器本地浏览器，攻击者从公网打过来不满足这条
+ *   ② 站点根目录不处于「已初始化且有管理员」的状态？—— 不，这条去掉，
+ *      因为故障时库里可能查不到。只用条件 ① 作为门槛。
+ *
+ * 【如果从公网首次访问】
+ *   不自动生成，而是显示一段「怎么启用」的说明 —— 因为公网首次访问
+ *   无法区分是管理员还是扫描器。
  * =========================================================================== */
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$isLoopback = in_array($clientIp, ['127.0.0.1', '::1', 'localhost'], true);
+$autoKey = '';   // 首次自动生成时填充，供页面显示
+
 if (!is_file($KEY_FILE)) {
-    http_response_code(404);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "404 Not Found\n";
-    exit;
+    if ($isLoopback) {
+        // 本机访问 → 自动生成并落盘
+        if (!is_dir($STATE_DIR)) {
+            @mkdir($STATE_DIR, 0755, true);
+        }
+        $newKey = bin2hex(random_bytes(16));   // 32 位十六进制
+        if (@file_put_contents($KEY_FILE, $newKey, LOCK_EX) !== false) {
+            @chmod($KEY_FILE, 0600);
+            @file_put_contents(
+                $LOG_FILE,
+                sprintf("[%s] ip=%s action=AUTO_PROVISIONED\n", date('Y-m-d H:i:s'), $clientIp),
+                FILE_APPEND | LOCK_EX
+            );
+            $autoKey = $newKey;   // 供下方页面直接显示
+        } else {
+            // 写不进去（权限）→ 提示如何处理
+            rescueCannotProvision($STATE_DIR, 'storage/state 目录不可写');
+            exit;
+        }
+    } else {
+        rescueCannotProvision($STATE_DIR, '首次启用仅允许从服务器本机访问');
+        exit;
+    }
 }
 
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+/**
+ * 无法自动启用时显示的说明页。
+ * 只说明「怎么启用」，不透露系统是否已初始化、有几个管理员等信息。
+ */
+function rescueCannotProvision(string $stateDir, string $why): void
+{
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    header('X-Robots-Tag: noindex, nofollow');
+    echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
+       . '<meta name="robots" content="noindex,nofollow">'
+       . '<title>救援接口未启用</title>'
+       . '<style>body{background:#0b0f17;color:#e6ebf5;font:14px/1.7 -apple-system,'
+       . '"PingFang SC","Microsoft YaHei",sans-serif;max-width:660px;margin:0 auto;padding:40px 20px}'
+       . 'code{background:#141a26;border:1px solid #232c3d;border-radius:4px;padding:2px 6px;'
+       . 'font-family:ui-monospace,monospace;font-size:12.5px}'
+       . 'pre{background:#141a26;border:1px solid #232c3d;border-radius:8px;padding:14px;'
+       . 'overflow-x:auto;font-size:12.5px;line-height:1.6}'
+       . 'h1{font-size:18px}</style></head><body>'
+       . '<h1>🛟 救援接口尚未启用</h1>'
+       . '<p>原因：' . htmlspecialchars($why, ENT_QUOTES, 'UTF-8') . '</p>'
+       . '<p>请在服务器上执行（把令牌文件建出来即可）：</p>'
+       . '<pre>cd 你的站点根目录\n'
+       . 'mkdir -p storage/state storage/logs\n'
+       . 'printf \'%s\' "$(head -c 32 /dev/urandom | base64 | tr -d \'/+=\' | head -c 32)" &gt; storage/state/rescue.key\n'
+       . 'chmod 600 storage/state/rescue.key\n'
+       . 'chown www:www storage/state/rescue.key storage/state storage/logs\n'
+       . 'cat storage/state/rescue.key</pre>'
+       . '<p>或者在服务器上直接执行 <code>bash emergency-fix.sh</code>，它会一并处理。</p>'
+       . '</body></html>';
+}
+
 
 /* ===========================================================================
  * 工具函数（自包含，不依赖 lib/Helpers.php）
@@ -549,10 +620,31 @@ if (!$lockInfo['locked']) {
 
   <!-- ============ 登录令牌 ============ -->
   <?php if (!$authed): ?>
+
+  <?php if (!empty($autoKey)): ?>
+  <!-- 首次本机访问：令牌刚生成，直接显给用户，省掉「去服务器 cat 文件」这一步 -->
+  <div class="msg ok" style="font-size:13px">
+    <strong>✓ 救援接口已自动启用</strong><br>
+    刚为本机生成了一次性救援令牌，已保存到 <code>storage/state/rescue.key</code>。<br>
+    请复制下方令牌并填入表单（下次访问只需查该文件即可）。
+  </div>
+  <div class="card" style="border-color:rgba(34,197,94,.35)">
+    <h2>你的救援令牌<span class="note">仅本次首次生成时显示</span></h2>
+    <div class="mono" style="background:#0e131d;border:1px solid #232c3d;border-radius:7px;
+         padding:12px;font-size:15px;letter-spacing:.5px;word-break:break-all;user-select:all"
+         onclick="this.select()"><?= h($autoKey) ?></div>
+    <div class="hint">
+      点击上方令牌可全选复制。请立即记下 —— 出于安全考虑它不会再在页面上出现。<br>
+      服务器上随时可查：<code>cat storage/state/rescue.key</code>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <form method="post" class="card">
     <h2>输入救援令牌<span class="note">位于服务器 storage/state/rescue.key</span></h2>
     <label>救援令牌</label>
     <input type="password" name="token" autocomplete="off" autofocus
+           value="<?= h((string) ($autoKey ?? '')) ?>"
            placeholder="粘贴 rescue.key 的内容">
     <div class="hint">
       还剩 <?= (int) $remaining ?> 次尝试机会（连续失败 5 次将锁定 1 小时）。<br>

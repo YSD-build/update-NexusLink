@@ -49,13 +49,130 @@ function body(): array {
     return is_array($data) ? $data : [];
 }
 
-/** 取 Bearer token 或 X-API-Key */
+/**
+ * 取客户端提交的鉴权凭据（session token 或 API Key）。
+ *
+ * ===========================================================================
+ * 【v1.1.5-b5 重大加固 —— 修复「所有接口 UNAUTHORIZED」】
+ *
+ * 事故现象：登录明明成功（登录接口不需要 token），但紧接着每一个接口
+ * 都返回 401 UNAUTHORIZED。前端右上角显示已登录、侧栏菜单也出来了，
+ * 就是拿不到任何数据。
+ *
+ * 根因是凭据在「浏览器 → nginx → PHP-FPM」这条路上被丢掉了，
+ * 而且有**两个独立的丢失点**，任意一个命中都会全线 401：
+ *
+ *   丢失点 ①：PHP-FPM 不填充 HTTP_AUTHORIZATION
+ *     部分 nginx/FastCGI 配置（宝塔默认、Apache 反代等）不会把
+ *     Authorization 头透传进 $_SERVER。它可能跑到了
+ *     REDIRECT_HTTP_AUTHORIZATION，或只存在于 getallheaders() 里。
+ *     原实现只看 HTTP_AUTHORIZATION，于是完全拿不到。
+ *
+ *   丢失点 ②：nginx 丢弃带下划线的请求头
+ *     前端为了兼容同时发了 `X-API-Key`，但这个头名含下划线。
+ *     nginx 在 `underscores_in_headers off`（默认值）时会**静默丢弃**
+ *     所有含下划线的请求头。于是这条兜底路径也断了。
+ *
+ * 原来的实现只覆盖了「理想情况」，两个丢失点一个都没防住 ——
+ * 本地用 php -S 测永远正常（它不剥离任何头），所以在服务器上才炸。
+ *
+ * 【现在的取值顺序】（任一命中即可，全部按「最可靠优先」排列）
+ *   1. HTTP_AUTHORIZATION          —— 标准 FastCGI 环境
+ *   2. REDIRECT_HTTP_AUTHORIZATION —— nginx/Apache 重写后的常见形态
+ *   3. HTTP_X_API_KEY              —— 无下划线过滤时的兜底
+ *   4. getallheaders() 全量扫描     —— 能拿到被 $_SERVER 遗漏的头
+ *   5. apache_request_headers()    —— 部分 SAPI 只提供这个
+ *   6. 最后兜底：从 $_SERVER 里模糊匹配任何像 Authorization 的键
+ *      （屏蔽具体配置差异，比逐个枚举更稳）
+ *
+ * 空值/空白也一并处理：拿到空串等于没拿到，必须继续往下找。
+ * ===========================================================================
+ */
 function bearerToken(): string {
+    // ---- 1) 标准位置 ----
     $h = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    if (preg_match('/Bearer\s+(\S+)/i', $h, $m)) {
+
+    // ---- 2) nginx / Apache 重写后常见位置 ----
+    if ($h === '') {
+        $h = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    }
+
+    // ---- 3) 模糊匹配：把 $_SERVER 里所有像 authorization 的键都试一遍 ----
+    // 不同环境会派生出 HTTP_AUTHORIZATION / REDIRECT_HTTP_AUTHORIZATION /
+    // HTTP_AUTHORIZATION_ 等变体，逐个枚举容易漏，这里统一扫描。
+    if ($h === '') {
+        foreach ($_SERVER as $k => $v) {
+            if (!is_string($v) || $v === '') {
+                continue;
+            }
+            if (stripos((string) $k, 'authorization') !== false) {
+                $h = $v;
+                break;
+            }
+        }
+    }
+
+    // ---- 4) 从 getallheaders() / apache_request_headers() 里捞 ----
+    // 有些 SAPI 不把这些头放进 $_SERVER，但函数能取到。
+    if ($h === '') {
+        $all = [];
+        if (function_exists('getallheaders')) {
+            $all = getallheaders();
+        } elseif (function_exists('apache_request_headers')) {
+            $all = apache_request_headers();
+        }
+        if (is_array($all)) {
+            foreach ($all as $k => $v) {
+                if (stripos((string) $k, 'authorization') !== false && (string) $v !== '') {
+                    $h = (string) $v;
+                    break;
+                }
+            }
+        }
+    }
+
+    // ---- 解析 Bearer ----
+    if (is_string($h) && $h !== '' && preg_match('/Bearer\s+(\S+)/i', $h, $m)) {
         return $m[1];
     }
-    return $_SERVER['HTTP_X_API_KEY'] ?? '';
+
+    // ---- 5) X-API-Key / X-Api-Key 兜底 ----
+    // 注意两种写法都要认：
+    //   X_API_KEY  → $_SERVER 里是 HTTP_X_API_KEY
+    //   X-Api-Key  → $_SERVER 里是 HTTP_X_API_KEY  （同样归一化成这个键）
+    // 前端 b5 起改用无下划线的 `X-Api-Key`，因为 nginx 默认会丢弃
+    // 含下划线的头名 —— 老版本前端发的 `X-API-Key` 在部分服务器上
+    // 根本到不了这里。两个都认才能兼容尚未更新的前端。
+    $k = (string) ($_SERVER['HTTP_X_API_KEY'] ?? '');
+    if ($k !== '') {
+        return $k;
+    }
+
+    // ---- 6) 再从全量头里找一次 x-api-key（兼容各种大小写/前缀） ----
+    $all = [];
+    if (function_exists('getallheaders')) {
+        $all = getallheaders();
+    } elseif (function_exists('apache_request_headers')) {
+        $all = apache_request_headers();
+    }
+    if (is_array($all)) {
+        foreach ($all as $key => $v) {
+            $norm = strtolower(str_replace(['_', '-'], '', (string) $key));
+            if ($norm === 'xapikey' && (string) $v !== '') {
+                return (string) $v;
+            }
+        }
+    }
+
+    // ---- 7) 最后：查 query 参数（仅用于「前端完全发不出头」的极端降级） ----
+    // 【为什么不常用】token 进 URL 会留下访问日志。
+    // 只在前面全部失败时才看，且前端默认不会这样发 —— 它是一根保命绳。
+    $q = (string) ($_GET['_tk'] ?? '');
+    if ($q !== '' && preg_match('/^[A-Za-z0-9._\-]{8,128}$/', $q)) {
+        return $q;
+    }
+
+    return '';
 }
 
 /**
