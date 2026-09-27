@@ -89,6 +89,21 @@ final class NodesController
         ];
         $params = ['online', $cpu, $mem, $connCount];
 
+        // 【v1.1.5 修】同时写入一个绝对时间戳（Unix 秒）。
+        //
+        // 为什么要两份时间：
+        //   last_seen   → 给人和 SQL 看（可读、能参与 GROUP BY），但它
+        //                 受 MySQL 时区影响，且前端/后端解析时又要过一次
+        //                 PHP 时区，两边不一致就会算出 8 小时延迟。
+        //   last_seen_ts → 给离线判定看。Unix 秒是个绝对量，跟任何时区
+        //                 配置都无关，因此永远算得准。
+        //
+        // 列可能不存在（老库还没迁移到位），所以按需探测，不强依赖。
+        if (hasColumn($db, 'nodes', 'last_seen_ts')) {
+            $sets[] = 'last_seen_ts = ?';
+            $params[] = time();
+        }
+
         if (array_key_exists('tunnelCount', $b) || array_key_exists('tunnels', $b)) {
             $sets[] = 'tunnels = ?';
             $params[] = (int) $num($b['tunnelCount'] ?? $b['tunnels'] ?? 0, 0, 1000000);
@@ -208,6 +223,13 @@ final class NodesController
             : ", '[\"tcp\",\"udp\",\"http\",\"https\"]' AS protocols, NULL AS lastSeen,
                0 AS cpu, 0 AS mem, 0 AS connCount, 0 AS probeOk, NULL AS probeAt";
 
+        // 心跳绝对时间戳（离线判定的可靠依据，与时区无关）。
+        // 列可能是老库还没迁移出来的，所以单独探测 —— 不要让它的缺失
+        // 把整个列表查询带崩（那会变成「节点页打不开」这种更糟的故障）。
+        $cols .= hasColumn($db, 'nodes', 'last_seen_ts')
+            ? ', last_seen_ts AS lastSeenTs'
+            : ', NULL AS lastSeenTs';
+
         if ($wantToken) {
             $cols .= hasColumn($db, 'nodes', 'node_token')
                 ? ', node_token AS nodeToken'
@@ -253,7 +275,49 @@ final class NodesController
         // 这几个字段把判断依据直接摆出来。
         $lastSeen = $r['lastSeen'] ?? null;
         if ($lastSeen) {
-            $ago = time() - (int) strtotime((string) $lastSeen);
+            // 【v1.1.5 修】离线判定不能只靠 strtotime(last_seen)。
+            //
+            // 事故现场：节点端心跳一直在发、接口也一直返回 200，但界面
+            // 永远显示「离线」。根因是 **PHP 与 MySQL 时区不一致**：
+            //   · 写入用 MySQL 的 NOW()   —— 跟随 MySQL 的 time_zone
+            //   · 比较用 PHP 的 time()    —— 跟随 php.ini 的 date.timezone
+            //   · strtotime() 又把那串字符串按 **PHP 时区** 解释
+            // 宝塔环境里 MySQL 常是 UTC、PHP 常是 Asia/Shanghai，于是
+            // 差值恒定偏 28800 秒，远超 90 秒的超时阈值 → 永久离线。
+            //
+            // 修法：优先用节点上报时一起存下的绝对时间戳 last_seen_ts
+            // （Unix 秒，与时区无关）。只有老数据没有这一列时才回落到
+            // strtotime —— 回落时**校验并纠正**明显不合理的时区偏移，
+            // 避免老节点因为这个问题继续显示离线。
+            $ago = null;
+
+            if (isset($r['lastSeenTs']) && $r['lastSeenTs'] !== null && $r['lastSeenTs'] !== '') {
+                $ago = time() - (int) $r['lastSeenTs'];
+                if ($ago < 0) {
+                    // 服务器时钟被回拨过，或节点上报了未来时间；按 0 处理
+                    $ago = 0;
+                }
+            } else {
+                // 老数据回落：解析字符串，并纠正整小时的时区漂移
+                $parsed = (int) strtotime((string) $lastSeen);
+                $diff   = time() - $parsed;
+
+                // 偏移量是整小时（±15 分钟误差内）时，判定为时区差而非真实延迟
+                $tzFix = 0;
+                foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as $h) {
+                    foreach ([$h * 3600, -$h * 3600] as $cand) {
+                        if ($diff > 0 && abs($diff - $cand) <= 900) {
+                            $tzFix = $cand;
+                            break 2;
+                        }
+                    }
+                }
+                $ago = max(0, $diff - $tzFix);
+                if ($tzFix !== 0) {
+                    $r['timezoneCorrected'] = (int) ($tzFix / 3600);
+                }
+            }
+
             $r['lastSeenAgo'] = $ago;
             $r['heartbeatStale'] = $ago > $timeout;
         } else {

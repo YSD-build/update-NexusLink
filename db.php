@@ -116,10 +116,20 @@ function requireAuth(): void {
         // 滑动续期：距上次活动超过 1 分钟才写库，避免每个请求都 UPDATE
         if ($hasExpiry) {
             try {
+                // 【v1.1.5 修】用 PHP 生成的时间字符串，与写入端同一时间源。
+                //
+                // 原来全程用 NOW() 其实**不会**错位（比较发生在 MySQL 内部，
+                // 两边的时间基准相同）。但写入端已改为 PHP 时间，若这里还
+                // 按 MySQL 的 NOW() 算，在时区不一致时会出现「last_active
+                // 永远小于 NOW()-60 秒」或反之，导致每个请求都 UPDATE（白
+                // 白加锁）或永远不 UPDATE（滑动续期失效）。统一时间源才能
+                // 让这个 60 秒节流真正按预期工作。
+                $ltNow = date('Y-m-d H:i:s');
+                $ltOld = date('Y-m-d H:i:s', time() - 60);
                 $db->prepare(
-                    'UPDATE sessions SET last_active = NOW()
-                      WHERE token = ? AND (last_active IS NULL OR last_active < NOW() - INTERVAL 60 SECOND)'
-                )->execute([$token]);
+                    'UPDATE sessions SET last_active = ?
+                      WHERE token = ? AND (last_active IS NULL OR last_active < ?)'
+                )->execute([$ltNow, $token, $ltOld]);
             } catch (Throwable $e) {
             }
         }
@@ -287,6 +297,7 @@ function schemaTableDDL(): array {
             protocols VARCHAR(64) NOT NULL DEFAULT '[\"tcp\",\"udp\",\"http\",\"https\"]',
             node_token VARCHAR(128) NOT NULL DEFAULT '',
             last_seen DATETIME NULL DEFAULT NULL,
+            last_seen_ts BIGINT NULL DEFAULT NULL,
             cpu DECIMAL(5,2) NOT NULL DEFAULT 0,
             mem DECIMAL(5,2) NOT NULL DEFAULT 0,
             conn_count INT NOT NULL DEFAULT 0,
@@ -481,7 +492,7 @@ function schemaActualColumns(PDO $db, string $table): array {
  */
 function schemaFingerprint(PDO $db): string {
     $expectNodes = [
-        'protocols', 'node_token', 'last_seen', 'cpu', 'mem',
+        'protocols', 'node_token', 'last_seen', 'last_seen_ts', 'cpu', 'mem',
         'conn_count', 'probe_ok', 'probe_at',
     ];
     $expectSession = ['expires_at', 'last_active'];
@@ -575,6 +586,12 @@ function ensureSchema(PDO $db): void {
             'protocols'   => "VARCHAR(64) NOT NULL DEFAULT '[\"tcp\",\"udp\",\"http\",\"https\"]'",
             'node_token'  => "VARCHAR(128) NOT NULL DEFAULT ''",
             'last_seen'   => 'DATETIME NULL DEFAULT NULL',
+            // 心跳绝对时间戳（Unix 秒）。
+            // 存在的理由：离线判定若用 last_seen（DATETIME）+ PHP 的
+            // strtotime()，会在「MySQL 用 UTC、PHP 用 Asia/Shanghai」的
+            // 宝塔常见组合下恒定偏 8 小时 → 节点一直显示离线。
+            // BIGINT 而非 INT：虽然 2038 前 INT 够用，但没理由留这个坑。
+            'last_seen_ts' => 'BIGINT NULL DEFAULT NULL',
             'cpu'         => 'DECIMAL(5,2) NOT NULL DEFAULT 0',
             'mem'         => 'DECIMAL(5,2) NOT NULL DEFAULT 0',
             'conn_count'  => 'INT NOT NULL DEFAULT 0',

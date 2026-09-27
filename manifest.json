@@ -1,42 +1,42 @@
 {
   "app": "lantian-tunnel",
-  "version": "1.1.5-b1",
-  "publishedAt": "2026-09-26T20:03:11Z",
-  "notes": "1.1.5-b1：后端模块化拆分（lib/ + controllers/ + routes.php）、节点心跳修复、深空玻璃设计系统（12 视图 + 双主题）、升级自举器",
+  "version": "1.1.5-b2",
+  "publishedAt": "2026-09-27T06:25:01Z",
+  "notes": "b2：心跳时区修复 + 用户端/管理端/代理端分离 + 代理商管理页 + 深空玻璃统一",
   "baseUrl": "",
   "fileCount": 38,
-  "totalBytes": 2214869,
+  "totalBytes": 2276089,
   "files": {
     "api.php": {
-      "sha256": "3938ea45d026ec0ad0d28cbca4719f4228e0220e2696b7f36e396c70edd774bc",
-      "size": 91513
+      "sha256": "a6ac5639edead3edce80287fdfa6f2d06a75fcd784dbc4795793016ef61f25ab",
+      "size": 92969
     },
     "assets/core-aqBwM8sQ.js": {
       "sha256": "2d80d24f545f8776453651be963d453f42764526864217c33c54c2cff72cef36",
       "size": 94743
     },
-    "assets/index-CGwLIJsc.js": {
-      "sha256": "ec1b7bc6e2017aafb21d63da753235ca376bbff569283245c4a530de7af6a610",
-      "size": 14401
+    "assets/index-CDQVp9Jp.js": {
+      "sha256": "afd9ab7d5b714f9ff670f335600a90064d407a6fac9ea0d08ca4759b17bf6250",
+      "size": 15162
     },
     "assets/libs-ByMrdxRv.js": {
       "sha256": "e04405fa596bce7860a5d657fbecbb19e55a91fd1e37d65ed9473bb27a140fc2",
       "size": 50055
     },
-    "assets/style-C-whs5qt.css": {
-      "sha256": "4aaa260fa3438fd41f4e187da39ec78c5d544365ba50c9524b44b486393d28b8",
-      "size": 69735
+    "assets/style-C5FFy0wI.css": {
+      "sha256": "6222dae302df2596f1ea341b6888601eeafa99ac88f4e35b586b77da7439122f",
+      "size": 80656
     },
-    "assets/ui-CE7qnSCl.js": {
-      "sha256": "a10d9ffdbca3bcfdc3f8ac8a133f07af22d8a7bc54d13664baebae1d22dbee73",
-      "size": 1407313
+    "assets/ui-Bm82Ti6D.js": {
+      "sha256": "fd770b5b7a34b299c3d6a5e6ed5402285a695393063556677df8fddc2c345bec",
+      "size": 1413957
     },
-    "assets/views-Dq1sE61E.js": {
-      "sha256": "b351ce03b5d3395bac8511038b78bc606e556ac733df643ffe7eb90eda9ab2b7",
-      "size": 135807
+    "assets/views-Ci9f09Oo.js": {
+      "sha256": "a7f2e98d150257ced8bb5d0e7ab9d5f97d6fcc51d1530c9dffa4d73427f6d750",
+      "size": 170917
     },
     "build-meta.json": {
-      "sha256": "97f761ad37cb5af2bf1308acd9101f2c539013559e98b068bae586f5dd6d3b13",
+      "sha256": "a9682d8d0e98abe8355f007705609a8e7f4a26e56ec91a42602032aae47fd15e",
       "size": 492
     },
     "controllers/AgentController.php": {
@@ -48,8 +48,8 @@
       "size": 2113
     },
     "controllers/AuthController.php": {
-      "sha256": "e397fa166dbdf76389e4e8b840b5b4edd60f5ce8cc86ef38893c7f5e652df188",
-      "size": 24881
+      "sha256": "19afca3c08ed83f8f032534d88b3d90646a0e4df5c0e397c36aa7180b06985e5",
+      "size": 26110
     },
     "controllers/ClientsController.php": {
       "sha256": "e67f51b87647b00b28deaa3808f8c15a9d73971d8f12e1afcf9e4e37178fa5c6",
@@ -68,8 +68,8 @@
       "size": 691
     },
     "controllers/NodesController.php": {
-      "sha256": "aedaa35b9974541c013d4fd535bae91a896528b7e946fdbd8ccf4f773e3067dd",
-      "size": 24363
+      "sha256": "44e67d166fd5dbd1e1bce77fe1c8248c40448ce391128b20a79f457587b45cd3",
+      "size": 27871
     },
     "controllers/ProxiesController.php": {
       "sha256": "f1465813bb0671b01db6ace9eb78acbe048b079f54e6a6a64ad994fe3a23affd",
@@ -84,8 +84,8 @@
       "size": 5431
     },
     "controllers/SetupController.php": {
-      "sha256": "458e1481a276bb3d8d62bf2870534a935fe178d72497803ed149740a35e86b0c",
-      "size": 7038
+      "sha256": "5ef5a273deecf9444eff64d0e05f2e83ac7000c8d0e3a138f2e73ed26bdab534",
+      "size": 7345
     },
     "controllers/UpdateController.php": {
       "sha256": "7a5b0f5d988bfae0190ba07e04dc999f1ea62839cf892e6648722d84eafdca05",
@@ -96,8 +96,8 @@
       "size": 5504
     },
     "db.php": {
-      "sha256": "53a1290f15d790e12fc41dde5bb1cd01ad172a9bd3532f1290095b2b62481676",
-      "size": 30688
+      "sha256": "c80dd410f523530efc1068e199c70299df6bdaa5dc11abadaa600aa48f36beb5",
+      "size": 31972
     },
     "favicon.svg": {
       "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
@@ -112,7 +112,7 @@
       "size": 5031
     },
     "index.html": {
-      "sha256": "89bd2408bb5257cf794cc193c1b97815986e7b9b1fae3266d83df3664528e2b2",
+      "sha256": "e04797c3ec78ac247f74c29b59ad21b8eab442da8b0de2ec6353fd0227b7e888",
       "size": 4223
     },
     "index.php": {

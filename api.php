@@ -341,12 +341,29 @@ function sweepOfflineNodes(PDO $db): int
     }
 
     try {
-        $st = $db->prepare(
-            "UPDATE nodes SET status = 'offline'
-              WHERE status IN ('online','busy')
-                AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL ? SECOND)"
-        );
-        $st->execute([$timeout]);
+        // 【v1.1.5 修】优先用绝对时间戳 last_seen_ts 判定。
+        //
+        // 原实现 "last_seen < NOW() - INTERVAL ? SECOND" 其实是安全的
+        // （比较全程在 MySQL 内部完成，不经过 PHP 时区）。但列表接口
+        // 现在改用 last_seen_ts 判定，如果这里还按 NOW() 算，两者就会
+        // 打架 —— 出现「界面显示在线、库里的 status 却是 offline」这种
+        // 自相矛盾的状态。统一到同一个依据上，才能保证 status 是唯一
+        // 可信来源（这正是本函数存在的意义）。
+        if (hasColumn($db, 'nodes', 'last_seen_ts')) {
+            $st = $db->prepare(
+                "UPDATE nodes SET status = 'offline'
+                  WHERE status IN ('online','busy')
+                    AND (last_seen_ts IS NULL OR last_seen_ts < ?)"
+            );
+            $st->execute([time() - $timeout]);
+        } else {
+            $st = $db->prepare(
+                "UPDATE nodes SET status = 'offline'
+                  WHERE status IN ('online','busy')
+                    AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL ? SECOND)"
+            );
+            $st->execute([$timeout]);
+        }
         return $st->rowCount();
     } catch (Throwable $e) {
         return 0;
@@ -805,10 +822,13 @@ if ($resource === 'setup' && $id === 'admin' && $method === 'POST') {
     if ($timeout <= 0) {
         $timeout = 60;
     }
+    // 【v1.1.5 修】同 AuthController：时间由 PHP 生成，与校验端同一时间源
+    $ltNow = date('Y-m-d H:i:s');
+    $ltExp = date('Y-m-d H:i:s', time() + $timeout * 60);
     $db->prepare(
         'INSERT INTO sessions (token, username, created_at, expires_at, last_active)
-         VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())'
-    )->execute([$token, $u, $timeout]);
+         VALUES (?, ?, ?, ?, ?)'
+    )->execute([$token, $u, $ltNow, $ltExp, $ltNow]);
 
     respond([
         'success' => true,
@@ -950,10 +970,15 @@ if ($resource === 'auth' && $id === 'login' && $method === 'POST') {
         $timeout = 60;
     }
     if (hasColumn($db, 'sessions', 'expires_at')) {
+        // 【v1.1.5 修】时间由 PHP 生成，不用 MySQL NOW()。
+        // 写入与校验必须同一时间源，否则「MySQL 用 UTC、PHP 用
+        // Asia/Shanghai」时登录会立刻失效（详见 AuthController 注释）。
+        $ltNow = date('Y-m-d H:i:s');
+        $ltExp = date('Y-m-d H:i:s', time() + $timeout * 60);
         $db->prepare(
             'INSERT INTO sessions (token, username, created_at, expires_at, last_active)
-             VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())'
-        )->execute([$token, $u, $timeout]);
+             VALUES (?, ?, ?, ?, ?)'
+        )->execute([$token, $u, $ltNow, $ltExp, $ltNow]);
     } else {
         $db->prepare('INSERT INTO sessions (token, username) VALUES (?, ?)')->execute([$token, $u]);
     }

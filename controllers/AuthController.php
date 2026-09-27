@@ -494,10 +494,26 @@ final class AuthController
 
         try {
             if ($hasExpiry) {
+                // 【v1.1.5 修】时间一律由 PHP 生成，不再用 MySQL 的 NOW()。
+                //
+                // 事故现场：登录成功、token 也返回了，但下一个请求立刻
+                // 报 SESSION_EXPIRED。原因是「写」与「读」用了两个时间源：
+                //   写：NOW()                  → 跟随 MySQL 的 time_zone
+                //   读：strtotime() < time()  → 跟随 PHP 的 date.timezone
+                // 宝塔上 MySQL 常为 UTC、PHP 常为 Asia/Shanghai。写入的
+                // expires_at 是 15:27，MySQL 的 NOW() 只有 05:27，若用
+                // SQL 比较会「还没过期就判定过期」；而 PHP 侧比较又把
+                // MySQL 写的字符串按本地时区解释，同样错位 8 小时。
+                //
+                // 统一到 PHP 侧生成 → 写入的字符串与校验时的 time() 出自
+                // 同一时钟，时区怎么配都不影响相对关系。
+                $now = date('Y-m-d H:i:s');
+                $exp = date('Y-m-d H:i:s', time() + $ttlSec);
+
                 $db->prepare(
                     'INSERT INTO sessions (token, username, created_at, expires_at, last_active)
-                     VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())'
-                )->execute([$token, $username, $ttlMin]);
+                     VALUES (?, ?, ?, ?, ?)'
+                )->execute([$token, $username, $now, $exp, $now]);
             } else {
                 $db->prepare('INSERT INTO sessions (token, username) VALUES (?, ?)')
                    ->execute([$token, $username]);
@@ -513,7 +529,9 @@ final class AuthController
         // 顺手清理过期会话与陈旧日志（低频，失败无所谓）
         try {
             if ($hasExpiry) {
-                $db->exec('DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at < NOW()');
+                // 同样改用 PHP 时间字符串比较，与上面的写入保持同一时间源
+                $db->prepare('DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?')
+                   ->execute([date('Y-m-d H:i:s')]);
             }
             Auth::gcAttempts($db);
         } catch (Throwable $e) {

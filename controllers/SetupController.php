@@ -129,10 +129,15 @@ final class SetupController
 
         // 与旧实现保持一致：单位是分钟
         if (hasColumn($db, 'sessions', 'expires_at')) {
+            // 【v1.1.5 修】时间由 PHP 生成，与 AuthController 的写入及
+            // db.php 的校验保持同一时间源（避免 MySQL/PHP 时区不一致时
+            // 会话被立即判定过期）。
+            $ltNow = date('Y-m-d H:i:s');
+            $ltExp = date('Y-m-d H:i:s', time() + $timeout * 60);
             $db->prepare(
                 'INSERT INTO sessions (token, username, created_at, expires_at, last_active)
-                 VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())'
-            )->execute([$token, $u, $timeout]);
+                 VALUES (?, ?, ?, ?, ?)'
+            )->execute([$token, $u, $ltNow, $ltExp, $ltNow]);
         } else {
             $db->prepare('INSERT INTO sessions (token, username) VALUES (?, ?)')
                ->execute([$token, $u]);
