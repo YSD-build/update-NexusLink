@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 深空玻璃的深空底色，与 design-system.css 的 --bg-deep 保持一致 -->
+    <meta name="theme-color" content="#0b1220" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>蓝天内网穿透 · 管理控制台</title>
+    <script>
+      /*
+       * 主题预置（防闪烁）
+       *
+       * 必须内联在 head 里、且在 CSS 之前执行。如果等到 Vue 挂载后再设置
+       * data-theme，页面会先按 CSS 默认值渲染一帧，然后才跳到用户主题 ——
+       * 表现为暗色用户每次刷新都看到一次白闪。
+       *
+       * 这里读 localStorage 的同款 key（与 stores/theme.ts 保持一致），
+       * 在首帧之前就把属性写到 <html> 上。
+       */
+      ;(function () {
+        try {
+          var t = localStorage.getItem('lantian_theme')
+          if (t !== 'light' && t !== 'dark') {
+            // 默认深色（与 stores/theme.ts 的 detectInitial 保持一致），
+            // 不跟随系统 —— 深空玻璃的主场是暗色。
+            t = 'dark'
+          }
+          document.documentElement.setAttribute('data-theme', t)
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark')
+        }
+      })()
+    </script>
+    <script type="module" crossorigin src="/assets/index-DtAf7JXq.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/core-aqBwM8sQ.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-Bm82Ti6D.js">
+    <link rel="modulepreload" crossorigin href="/assets/libs-ByMrdxRv.js">
+    <link rel="modulepreload" crossorigin href="/assets/views-CSbsFAP3.js">
+    <link rel="stylesheet" crossorigin href="/assets/style-C5FFy0wI.css">
+    <meta name="app-version" content="1.1.5-b7" />
+  <meta name="app-build-stamp" content="mumx49qh" />
+  </head>
+  <body>
+    <!--
+      ========================================================================
+      液态玻璃折射滤镜 —— 整个视觉方案的基石
+      ========================================================================
+
+      【为什么必须放在 body 最前面】
+      CSS 里的 backdrop-filter: url(#lgRefract) 会按 id 引用这个滤镜。
+      如果滤镜元素还没被解析，backdrop-filter 会被整条丢弃 ——
+      玻璃退化成「半透明白块」，看起来像脏了的磨砂塑料，
+      而且浏览器不会报任何错，极难排查。
+
+      放在 body 首位（而非动态插入）保证：任何玻璃元素的首次渲染时，
+      滤镜一定已经存在于 DOM 中。
+
+      【参数为什么是这几个值】（改动前请先读 recipes.html 的对照表）
+        baseFrequency 0.008 0.014  折射粒度。超过 0.02 会变成磨砂噪点，
+                                   低于 0.004 则完全看不出形变。
+        numOctaves    2            噪声细节层数。2 足够；3 以上性能明显下降。
+        stdDeviation  1.4          噪声平滑度。太大了折射被抹平，1.1~1.6 合适。
+        scale         13           位移强度。13 是克制值，24 是强折射，
+                                   超过 30 会让人晕眩。
+
+      【颜色空间】
+      color-interpolation-filters="sRGB" 必须显式声明。
+      SVG 滤镜默认在线性 RGB 空间运算，sRGB 值会被当成线性值处理，
+      结果是位移量算出来偏大、且边缘出现异常彩边。
+    -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <filter id="lgRefract" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="2" seed="7" result="n" />
+        <feGaussianBlur in="n" stdDeviation="1.4" result="s" />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="s"
+          scale="13"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </svg>
+
+    <div id="app"></div>
+  </body>
+</html>
