@@ -1,0 +1,19 @@
+{
+  "app": "lantian-tunnel",
+  "appVersion": "1.2.0",
+  "version": "b0eb4002b8fb",
+  "builtAt": "2026-09-29T18:10:29.270Z",
+  "fileCount": 9,
+  "totalBytes": 1756553,
+  "files": {
+    "assets/core-Dm2M31I1.js": 94743,
+    "assets/index-D20HEW0E.js": 8249,
+    "assets/libs-ByMrdxRv.js": 50055,
+    "assets/style-CXQ1WpF6.css": 63674,
+    "assets/ui-DRtrXYIQ.js": 1376845,
+    "assets/views-BuRBGbD6.js": 147157,
+    "favicon.svg": 9522,
+    "icons.svg": 5031,
+    "index.html": 1277
+  }
+}
